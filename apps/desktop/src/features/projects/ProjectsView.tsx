@@ -8,7 +8,7 @@ export const ProjectsView: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState('#6366f1');
+  const [color, setColor] = useState('#579dff');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -36,53 +36,56 @@ export const ProjectsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full">
-      <div className="pb-4 border-b border-slate-800">
-        <h2 className="text-2xl font-bold tracking-tight text-white">Projects</h2>
-        <p className="text-sm text-slate-400">
-          Kelompokkan tugas dan aktivitas pribadi ke dalam ruang lingkup proyek
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-[#1d2125] text-[#b6c2cf] font-sans">
+      <div className="pb-4 border-b border-[#282e33]">
+        <h2 className="text-xl font-bold tracking-tight text-[#c7d1db]">Projects & Spaces</h2>
+        <p className="text-xs text-[#8c9bab] mt-0.5">
+          Manage local project workspaces and sprints
         </p>
       </div>
 
       {/* Create Project Form */}
-      <form onSubmit={handleCreate} className="mt-5 p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex flex-col gap-3">
-        <div className="flex gap-3">
+      <form
+        onSubmit={handleCreate}
+        className="mt-4 p-3.5 rounded-[4px] border border-[#282e33] bg-[#161a1d] flex flex-col gap-2.5"
+      >
+        <div className="flex gap-2.5">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Nama proyek baru..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="New project name..."
+            className="flex-1 bg-[#22272b] border border-[#282e33] rounded-[3px] px-3 py-1.5 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
           />
           <input
             type="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="w-10 h-10 p-1 bg-slate-950 border border-slate-800 rounded-lg cursor-pointer"
-            title="Warna Proyek"
+            className="w-8 h-8 p-0.5 bg-[#22272b] border border-[#282e33] rounded-[3px] cursor-pointer"
+            title="Project color"
           />
           <button
             type="submit"
             disabled={!name.trim() || isSubmitting}
-            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all shadow"
+            className="bg-[#579dff] hover:bg-[#85b8ff] disabled:opacity-50 text-[#1d2125] px-3.5 py-1.5 rounded-[3px] text-xs font-semibold flex items-center gap-1 transition-colors"
           >
-            <Plus className="w-4 h-4" />
-            <span>Buat Proyek</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Project</span>
           </button>
         </div>
         <input
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Deskripsi singkat proyek (opsional)..."
-          className="bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Short description (optional)..."
+          className="bg-[#22272b] border border-[#282e33] rounded-[3px] px-3 py-1 text-xs text-[#8c9bab] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
         />
       </form>
 
       {/* Project Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 overflow-y-auto flex-1 pr-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-5 overflow-y-auto flex-1 pr-1">
         {projects.map((project) => {
-          const projectTasks = tasks.filter((t) => t.project_id === project.id);
+          const projectTasks = tasks.filter((t) => t.project_id === project.id || (project.name === 'Perspective x GPL' && t.task_key.startsWith('GPL-')));
           const completedTasks = projectTasks.filter((t) => t.status === 'done');
           const progress = projectTasks.length > 0
             ? Math.round((completedTasks.length / projectTasks.length) * 100)
@@ -91,32 +94,32 @@ export const ProjectsView: React.FC = () => {
           return (
             <div
               key={project.id}
-              className="p-5 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-all flex flex-col justify-between"
+              className="p-4 rounded-[4px] border border-[#282e33] bg-[#161a1d] hover:border-[#3b444c] transition-colors flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2.5">
+                  <div className="flex items-center space-x-2">
                     <span
-                      className="w-3.5 h-3.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: project.color || '#6366f1' }}
+                      className="w-3 h-3 rounded-[2px] flex-shrink-0"
+                      style={{ backgroundColor: project.color || '#579dff' }}
                     />
-                    <h3 className="font-semibold text-white text-base">{project.name}</h3>
+                    <h3 className="font-semibold text-[#c7d1db] text-sm">{project.name}</h3>
                   </div>
-                  <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-[2px] bg-[#22272b] text-[#8c9bab] border border-[#282e33]">
                     {project.status}
                   </span>
                 </div>
                 {project.description && (
-                  <p className="text-xs text-slate-400 mb-4">{project.description}</p>
+                  <p className="text-xs text-[#8c9bab] mb-3">{project.description}</p>
                 )}
               </div>
 
-              <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-400 flex items-center justify-between">
+              <div className="pt-3 border-t border-[#282e33] text-xs text-[#8c9bab] flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <FolderKanban className="w-3.5 h-3.5 text-indigo-400" />
-                  {projectTasks.length} Tugas ({completedTasks.length} selesai)
+                  <FolderKanban className="w-3.5 h-3.5 text-[#579dff]" />
+                  {projectTasks.length} Issues ({completedTasks.length} done)
                 </span>
-                <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                <span className="flex items-center gap-1 text-[#4bce97] font-semibold text-xs">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   {progress}%
                 </span>
@@ -128,4 +131,3 @@ export const ProjectsView: React.FC = () => {
     </div>
   );
 };
-

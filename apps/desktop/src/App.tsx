@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AppLayout, NavTab } from './components/layout/AppLayout';
 import { TimelineView } from './features/timeline/TimelineView';
+import { KanbanBoardView } from './features/tasks/KanbanBoardView';
+import { BacklogView } from './features/tasks/BacklogView';
 import { TaskListView } from './features/tasks/TaskListView';
 import { ProjectsView } from './features/projects/ProjectsView';
 import { CalendarAgendaView } from './features/calendar/CalendarAgendaView';
@@ -55,7 +57,7 @@ export const App: React.FC = () => {
 
   return (
     <>
-      {/* MAVEN Dynamic Island (Poni Desktop) with Voice Push-to-Talk */}
+      {/* MAVEN Dynamic Island with Voice Push-to-Talk (ADS Dark Aesthetic) */}
       <DynamicIsland
         onOpenQuickAdd={() => {
           setIsQuickActionOpen(true);
@@ -77,21 +79,32 @@ export const App: React.FC = () => {
         onVoiceActiveChange={setIsVoiceActive}
       />
 
-      {/* Success Toast */}
+      {/* ADS Styled Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1d212a] border border-[#262933] text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <span className="text-[#579dff]">✨</span>
+        <div className="fixed bottom-6 right-6 z-50 bg-[#22272b] border border-[#282e33] text-[#c7d1db] px-3.5 py-2 rounded-[3px] shadow-2xl text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <span className="text-[#579dff]">ℹ</span>
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Main Full-App Dashboard */}
-      <AppLayout currentTab={currentTab} onTabChange={setCurrentTab}>
-        {currentTab === 'timeline' && <TimelineView />}
-        {currentTab === 'tasks' && <TaskListView />}
+      <AppLayout
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
+        onOpenCreate={() => setIsQuickActionOpen(true)}
+      >
+        {currentTab === 'timeline' && (
+          <TimelineView
+            onTabChange={setCurrentTab}
+            onOpenCreate={() => setIsQuickActionOpen(true)}
+          />
+        )}
+        {currentTab === 'board' && <KanbanBoardView />}
+        {currentTab === 'backlog' && <BacklogView />}
+        {currentTab === 'list' && <TaskListView />}
         {currentTab === 'projects' && <ProjectsView />}
         {currentTab === 'calendar' && <CalendarAgendaView />}
-        {currentTab === 'notes' && <NotesView />}
+        {currentTab === 'docs' && <NotesView />}
         {currentTab === 'chat' && <ChatView />}
       </AppLayout>
     </>

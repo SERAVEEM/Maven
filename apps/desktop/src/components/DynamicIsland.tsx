@@ -4,11 +4,11 @@ import { ipc } from '../lib/ipc';
 import {
   Maximize2,
   Plus,
-  Bell,
   ChevronDown,
   Mic,
   MicOff,
   CheckCircle2,
+  Zap,
 } from 'lucide-react';
 
 interface DynamicIslandProps {
@@ -30,7 +30,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
   const [voiceSuccess, setVoiceSuccess] = useState<string | null>(null);
   const speechRef = useRef<any>(null);
 
-  // Live clock
+  // Live system clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -43,16 +43,17 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch top urgent/active task for glanceable display
+  // Fetch active sprint task for glanceable display
   useEffect(() => {
     const fetchTopTask = async () => {
       try {
         const tasks = await ipc.getTasks(false);
+        const inProgress = tasks.find((t) => t.status === 'in_progress');
         const urgentOrTodo =
           tasks.find(
             (t) => t.status !== 'done' && (t.priority === 'urgent' || t.priority === 'high')
           ) || tasks.find((t) => t.status !== 'done');
-        setActiveTask(urgentOrTodo || null);
+        setActiveTask(inProgress || urgentOrTodo || null);
       } catch {
         // ignore
       }
@@ -62,7 +63,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Stop voice capture
+  // Stop voice listening
   const stopVoiceListening = useCallback(() => {
     setIsListening(false);
     if (speechRef.current) {
@@ -83,7 +84,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
       const res = await ipc.executeIntent(intent);
       if (res.success) {
         setVoiceSuccess(transcriptText);
-        setTimeout(() => setVoiceSuccess(null), 3500);
+        setTimeout(() => setVoiceSuccess(null), 3000);
       }
     } catch (err) {
       console.error(err);
@@ -91,99 +92,102 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
   }, []);
 
   // Start voice listening
-  const startVoiceListening = useCallback((e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (onTriggerVoice) {
-      onTriggerVoice();
-      return;
-    }
-
-    setIsListening(true);
-    setVoiceTranscript('');
-    setVoiceSuccess(null);
-
-    const SpeechRecognition =
-      (window as unknown as { SpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'id-ID';
-        recognition.interimResults = true;
-        recognition.continuous = false;
-
-        recognition.onresult = (event: any) => {
-          const text = Array.from(event.results)
-            .map((r: any) => r[0].transcript)
-            .join('');
-          setVoiceTranscript(text);
-        };
-
-        recognition.onend = () => {
-          stopVoiceListening();
-          if (voiceTranscript) {
-            executeVoiceCommand(voiceTranscript);
-          }
-        };
-
-        recognition.onerror = () => {
-          stopVoiceListening();
-        };
-
-        speechRef.current = recognition;
-        recognition.start();
+  const startVoiceListening = useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
+      if (onTriggerVoice) {
+        onTriggerVoice();
         return;
-      } catch {
-        // Fallback
       }
-    }
 
-    // Realistic simulation fallback
-    const timer = setTimeout(() => {
-      const simulatedText = 'buat tugas GPL-66 Security Review besok urgent';
-      setVoiceTranscript(simulatedText);
-      stopVoiceListening();
-      executeVoiceCommand(simulatedText);
-    }, 2400);
+      setIsListening(true);
+      setVoiceTranscript('');
+      setVoiceSuccess(null);
 
-    return () => clearTimeout(timer);
-  }, [executeVoiceCommand, onTriggerVoice, stopVoiceListening, voiceTranscript]);
+      const SpeechRecognition =
+        (window as unknown as { SpeechRecognition?: any }).SpeechRecognition ||
+        (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.lang = 'id-ID';
+          recognition.interimResults = true;
+          recognition.continuous = false;
+
+          recognition.onresult = (event: any) => {
+            const text = Array.from(event.results)
+              .map((r: any) => r[0].transcript)
+              .join('');
+            setVoiceTranscript(text);
+          };
+
+          recognition.onend = () => {
+            stopVoiceListening();
+            if (voiceTranscript) {
+              executeVoiceCommand(voiceTranscript);
+            }
+          };
+
+          recognition.onerror = () => {
+            stopVoiceListening();
+          };
+
+          speechRef.current = recognition;
+          recognition.start();
+          return;
+        } catch {
+          // fallback
+        }
+      }
+
+      // Realistic audio fallback
+      const timer = setTimeout(() => {
+        const simulatedText = 'buat tugas GPL-66 Security Audit besok urgent';
+        setVoiceTranscript(simulatedText);
+        stopVoiceListening();
+        executeVoiceCommand(simulatedText);
+      }, 2400);
+
+      return () => clearTimeout(timer);
+    },
+    [executeVoiceCommand, onTriggerVoice, stopVoiceListening, voiceTranscript]
+  );
 
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out select-none">
-      {/* Island Container */}
+    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 transition-all duration-200 select-none font-sans">
+      {/* Dynamic Island Notch: Atlassian Dark Mode aesthetic (bg #161a1d, border #282e33, sharp clean lines) */}
       <div
-        className={`bg-[#101216]/95 backdrop-blur-2xl border border-white/10 text-white rounded-full shadow-2xl transition-all duration-300 flex items-center justify-between cursor-pointer hover:border-[#579dff]/40 ${
+        className={`bg-[#161a1d] border border-[#282e33] text-[#b6c2cf] shadow-xl transition-all duration-200 flex items-center justify-between cursor-pointer rounded-[4px] ${
           isListening
-            ? 'w-[440px] px-4 py-2.5 rounded-2xl border-emerald-500/50 shadow-emerald-500/20'
+            ? 'w-[420px] px-3.5 py-2 border-[#579dff]/60'
             : voiceSuccess
-            ? 'w-[380px] px-4 py-2 border-emerald-500/40 shadow-emerald-500/10'
+            ? 'w-[360px] px-3 py-1.5 border-[#216e4e]'
             : isExpanded
-            ? 'w-[420px] px-5 py-3 rounded-2xl flex-col gap-3 shadow-blue-500/10'
-            : 'w-[350px] px-4 py-2 hover:w-[370px]'
+            ? 'w-[400px] px-4 py-3 flex-col gap-2.5 shadow-2xl'
+            : 'w-[340px] px-3 py-1.5 hover:border-[#3b444c]'
         }`}
         onClick={() => !isExpanded && !isListening && setIsExpanded(true)}
       >
-        {/* LISTENING STATE: Audio wave animation & live voice transcription */}
+        {/* LISTENING STATE: Clean audio wave bars */}
         {isListening ? (
           <div className="flex items-center justify-between w-full text-xs">
             <div className="flex items-center space-x-2">
-              <span className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40 animate-pulse">
-                <Mic className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="p-1 rounded-[2px] bg-[#579dff]/20 text-[#579dff]">
+                <Mic className="w-3.5 h-3.5 text-[#579dff]" />
               </span>
               {/* Audio Wave Bars */}
               <div className="flex items-center gap-1">
-                <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-3" />
-                <span className="w-1 bg-[#579dff] rounded-full animate-pulse h-5" />
-                <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-4" />
-                <span className="w-1 bg-[#579dff] rounded-full animate-pulse h-6" />
-                <span className="w-1 bg-emerald-400 rounded-full animate-bounce h-2" />
+                <span className="w-1 bg-[#579dff] rounded-[1px] animate-bounce h-2.5" />
+                <span className="w-1 bg-[#85b8ff] rounded-[1px] animate-pulse h-4" />
+                <span className="w-1 bg-[#579dff] rounded-[1px] animate-bounce h-3" />
+                <span className="w-1 bg-[#85b8ff] rounded-[1px] animate-pulse h-5" />
+                <span className="w-1 bg-[#579dff] rounded-[1px] animate-bounce h-2" />
               </div>
             </div>
 
-            <div className="flex-1 mx-3 truncate text-center text-emerald-300 font-medium text-[11px]">
-              {voiceTranscript || 'Mendengarkan suara Anda... (Bicara)'}
+            <div className="flex-1 mx-2.5 truncate text-center text-[#c7d1db] font-medium text-[11px]">
+              {voiceTranscript || 'Mendengarkan... (Alt+V)'}
             </div>
 
             <button
@@ -191,108 +195,110 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
                 e.stopPropagation();
                 stopVoiceListening();
               }}
-              className="p-1 text-[#8993a4] hover:text-white rounded"
-              title="Cancel Voice"
+              className="p-1 text-[#8c9bab] hover:text-[#ff5630] rounded-[2px]"
+              title="Stop listening"
             >
-              <MicOff className="w-3.5 h-3.5 text-rose-400" />
+              <MicOff className="w-3.5 h-3.5 text-[#ff5630]" />
             </button>
           </div>
         ) : voiceSuccess ? (
-          /* Voice Success Toast Inside Island */
+          /* Voice Success confirmation */
           <div className="flex items-center justify-between w-full text-xs">
             <div className="flex items-center space-x-2 truncate">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span className="truncate text-[11px] text-slate-200 font-medium">
-                Berhasil: <span className="text-[#579dff]">{voiceSuccess}</span>
+              <CheckCircle2 className="w-4 h-4 text-[#4bce97] flex-shrink-0" />
+              <span className="truncate text-[11px] text-[#c7d1db] font-medium">
+                Created: <span className="text-[#579dff]">{voiceSuccess}</span>
               </span>
             </div>
-            <span className="text-[10px] text-emerald-400 font-bold uppercase ml-2 flex-shrink-0">
+            <span className="text-[10px] text-[#4bce97] font-bold uppercase ml-2 flex-shrink-0">
               OK
             </span>
           </div>
         ) : !isExpanded ? (
-          /* Compact Mode View */
+          /* Compact Glance Mode */
           <div className="flex items-center justify-between w-full text-xs">
-            {/* Left: Clock & Pulsing Status */}
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
-              <span className="font-semibold tracking-wider font-mono text-[11px] text-slate-200">
+            {/* Left: Clock */}
+            <div className="flex items-center space-x-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#4bce97]" />
+              <span className="font-semibold font-mono text-[11px] text-[#c7d1db]">
                 {time}
               </span>
             </div>
 
-            {/* Center: Glanceable Task / Info */}
-            <div className="flex-1 mx-2.5 truncate text-center text-slate-300 font-medium text-[11px]">
+            {/* Center: Glanceable Task */}
+            <div className="flex-1 mx-2 truncate text-center text-[#b6c2cf] text-[11px]">
               {activeTask ? (
                 <span className="truncate flex items-center justify-center gap-1">
-                  <span className="text-[#579dff] font-mono font-bold">{activeTask.task_key}</span>
-                  <span className="truncate">{activeTask.title}</span>
+                  <Zap className="w-3 h-3 text-[#8777d9] flex-shrink-0" />
+                  <span className="text-[#579dff] font-mono font-semibold">{activeTask.task_key}</span>
+                  <span className="truncate text-[#8c9bab]">{activeTask.title}</span>
                 </span>
               ) : (
-                <span className="text-slate-500 italic">Perspective x GPL Ready</span>
+                <span className="text-[#738496]">Perspective x GPL</span>
               )}
             </div>
 
-            {/* Right: Push-to-Talk Mic button & Chevron */}
-            <div className="flex items-center space-x-1.5 text-[#8993a4]">
+            {/* Right: Push-to-Talk Mic icon & Chevron */}
+            <div className="flex items-center space-x-1 text-[#8c9bab]">
               <button
                 onClick={(e) => startVoiceListening(e)}
-                className="p-1 rounded-md hover:bg-white/10 hover:text-[#579dff] transition-colors"
+                className="p-1 rounded-[2px] hover:bg-[#22272b] hover:text-[#579dff] transition-colors"
                 title="Voice Push-to-Talk (Alt+V)"
               >
-                <Mic className="w-3.5 h-3.5 text-[#579dff]" />
+                <Mic className="w-3 h-3 text-[#579dff]" />
               </button>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
             </div>
           </div>
         ) : (
           /* Expanded Island View */
-          <div className="w-full space-y-2.5">
-            {/* Expanded Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+          <div className="w-full space-y-2">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#282e33] pb-1.5">
               <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#579dff]" />
-                <span className="font-bold text-xs tracking-wide text-white">MAVEN Dynamic Island</span>
-                <span className="text-[10px] font-mono text-[#8993a4]">{time}</span>
+                <span className="w-2 h-2 rounded-full bg-[#579dff]" />
+                <span className="font-semibold text-xs text-[#c7d1db]">
+                  Dynamic Island
+                </span>
+                <span className="text-[10px] font-mono text-[#738496]">{time}</span>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsExpanded(false);
-                  }}
-                  className="p-1 hover:bg-white/10 rounded-lg text-[#8993a4] hover:text-white transition-colors text-[10px]"
-                >
-                  Tutup
-                </button>
-              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(false);
+                }}
+                className="text-[10px] text-[#8c9bab] hover:text-[#c7d1db] px-1.5 py-0.5 rounded-[2px] hover:bg-[#22272b]"
+              >
+                Close
+              </button>
             </div>
 
-            {/* Active Task / Notification Glance */}
-            <div className="bg-white/5 border border-white/5 rounded-xl p-2.5 text-xs">
-              <div className="flex items-center justify-between text-[10px] text-[#8993a4] mb-1">
-                <span className="flex items-center gap-1 font-semibold text-[#579dff] uppercase tracking-wider">
-                  <Bell className="w-3 h-3" /> Fokus Sprint Saat Ini
+            {/* Current Focus Card */}
+            <div className="bg-[#22272b] border border-[#282e33] rounded-[3px] p-2 text-xs">
+              <div className="flex items-center justify-between text-[10px] text-[#8c9bab] mb-1">
+                <span className="font-semibold text-[#579dff] uppercase tracking-wider">
+                  Current Sprint Focus
                 </span>
                 {activeTask && (
-                  <span className="px-1.5 py-0.5 rounded bg-[#ffab00]/20 text-[#ffab00] font-bold uppercase text-[9px]">
-                    {activeTask.priority}
+                  <span className="px-1 py-0.2 rounded-[2px] bg-[#0055cc]/20 text-[#579dff] font-bold text-[9px]">
+                    {activeTask.status.replace('_', ' ').toUpperCase()}
                   </span>
                 )}
               </div>
-              <p className="text-slate-200 font-medium truncate flex items-center gap-1.5">
+              <p className="text-[#c7d1db] font-medium truncate flex items-center gap-1.5">
                 {activeTask ? (
                   <>
-                    <span className="font-mono text-[#579dff]">{activeTask.task_key}</span>
+                    <Zap className="w-3.5 h-3.5 text-[#8777d9] flex-shrink-0" />
+                    <span className="font-mono text-[#579dff] font-semibold">{activeTask.task_key}</span>
                     <span className="truncate">{activeTask.title}</span>
                   </>
                 ) : (
-                  'Semua tugas sprint telah selesai untuk saat ini! 🎉'
+                  'All sprint issues completed! 🎉'
                 )}
               </p>
             </div>
 
-            {/* Quick Actions Footer */}
+            {/* Quick Action Footer */}
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center space-x-2">
                 <button
@@ -301,19 +307,18 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
                     setIsExpanded(false);
                     onOpenQuickAdd();
                   }}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#579dff] hover:bg-[#68a4ff] text-[#101216] transition-all shadow-md shadow-blue-500/20"
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-[3px] bg-[#579dff] hover:bg-[#85b8ff] text-[#1d2125] transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  Quick Action
+                  <Plus className="w-3 h-3 stroke-[2.5]" />
+                  <span>Command (Alt+K)</span>
                 </button>
 
-                {/* Voice Push-to-Talk button in Expanded Island */}
                 <button
                   onClick={(e) => startVoiceListening(e)}
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#579dff] hover:text-white transition-all"
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-[3px] bg-[#22272b] hover:bg-[#282e33] text-[#579dff] border border-[#282e33] transition-colors"
                   title="Voice Push-to-Talk (Alt+V)"
                 >
-                  <Mic className="w-3.5 h-3.5" />
+                  <Mic className="w-3 h-3" />
                   <span>Voice</span>
                 </button>
               </div>
@@ -324,10 +329,10 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
                   setIsExpanded(false);
                   onMaximizeApp();
                 }}
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#c1c7d0] hover:text-white transition-all"
+                className="flex items-center gap-1 text-xs text-[#8c9bab] hover:text-[#c7d1db] px-2 py-1 rounded-[3px] hover:bg-[#22272b] transition-colors"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Buka Jendela Penuh
+                <Maximize2 className="w-3 h-3" />
+                <span>Open View</span>
               </button>
             </div>
           </div>

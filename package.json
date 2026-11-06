@@ -1,0 +1,25 @@
+{
+  "name": "maven",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MAVEN - Local-first personal AI assistant",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=apps/desktop run dev",
+    "build": "npm --workspace=packages/contracts run build && npm --workspace=apps/desktop run build",
+    "typecheck": "npm run --workspaces --if-present typecheck"
+  },
+  "keywords": [
+    "local-first",
+    "productivity",
+    "assistant",
+    "tauri",
+    "react"
+  ],
+  "author": "MAVEN Team",
+  "license": "MIT"
+}
+

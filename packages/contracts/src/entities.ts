@@ -15,19 +15,23 @@ export interface Project {
   updated_at: string; // ISO-8601 UTC
 }
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done' | 'cancelled';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface Task {
   id: string; // UUID
   project_id: string | null;
+  task_key: string;
   title: string;
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  starts_at: string | null; // ISO-8601 UTC
   due_at: string | null; // ISO-8601 UTC
   due_timezone: string | null; // IANA timezone
   completed_at: string | null; // ISO-8601 UTC
+  epic: string | null;
+  color: string | null;
   created_at: string; // ISO-8601 UTC
   updated_at: string; // ISO-8601 UTC
   deleted_at: string | null; // ISO-8601 UTC (soft delete)

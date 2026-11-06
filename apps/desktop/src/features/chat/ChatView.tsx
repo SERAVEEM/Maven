@@ -5,7 +5,6 @@ import {
   Send,
   Sparkles,
   CheckCircle2,
-  AlertTriangle,
   Bot,
   User,
   Zap,

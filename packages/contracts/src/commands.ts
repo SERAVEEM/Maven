@@ -3,28 +3,37 @@
  * Used across Presentation Layer and Host Backend (Tauri IPC)
  */
 
-import { Task, Project, Note, CalendarEvent, Reminder, TaskPriority, TaskStatus } from './entities.js';
+import { TaskPriority, TaskStatus } from './entities.js';
 
 // Task Commands
 export interface CreateTaskDto {
+  task_key?: string;
   title: string;
   description?: string;
   project_id?: string;
+  status?: TaskStatus;
   priority?: TaskPriority;
+  starts_at?: string;
   due_at?: string;
   due_timezone?: string;
+  epic?: string;
+  color?: string;
 }
 
 export interface UpdateTaskDto {
   id: string;
+  task_key?: string;
   title?: string;
   description?: string;
   project_id?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority;
+  starts_at?: string | null;
   due_at?: string | null;
   due_timezone?: string | null;
   completed_at?: string | null;
+  epic?: string | null;
+  color?: string | null;
 }
 
 export interface TaskFilterDto {

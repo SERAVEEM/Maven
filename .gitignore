@@ -30,3 +30,8 @@ Thumbs.db
 .env
 .env.local
 
+# Documentation (exclude all .md except README.md)
+*.md
+!README.md
+
+

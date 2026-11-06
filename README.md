@@ -16,6 +16,8 @@
     komponen, alur data, keamanan, keputusan teknologi.
 4.  [`DATABASE.md`](DATABASE.md) --- model data SQLite, tabel, relasi,
     indeks, constraint, dan strategi migrasi.
+5.  [`AGENTS.md`](AGENTS.md) --- struktur tim Software House multi-agent,
+    pembagian peran PM, Frontend, Backend, dan alur QA.
 
 ## Cara membaca status keputusan
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarEvent } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
-import { Calendar, Clock, MapPin, Plus } from 'lucide-react';
+import { Clock, MapPin, Plus } from 'lucide-react';
 
 export const CalendarAgendaView: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);

@@ -17,15 +17,19 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  task_key TEXT,
   title TEXT NOT NULL CHECK (length(trim(title)) > 0),
   description TEXT,
   status TEXT NOT NULL DEFAULT 'todo'
-    CHECK (status IN ('todo', 'in_progress', 'done', 'cancelled')),
+    CHECK (status IN ('backlog', 'todo', 'in_progress', 'done', 'cancelled')),
   priority TEXT NOT NULL DEFAULT 'medium'
     CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+  starts_at TEXT,
   due_at TEXT,
   due_timezone TEXT,
   completed_at TEXT,
+  epic TEXT,
+  color TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   deleted_at TEXT
@@ -146,6 +150,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_task_key ON tasks(task_key);
+CREATE INDEX IF NOT EXISTS idx_tasks_starts_at ON tasks(starts_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_status_priority ON tasks(status, priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at);

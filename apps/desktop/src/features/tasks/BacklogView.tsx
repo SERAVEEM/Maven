@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Task } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
 import {
+  TaskDetailDrawer,
+  getMemberInitials,
+  getMemberColor,
+} from './TaskDetailDrawer';
+import {
   ChevronDown,
   ChevronRight,
   Zap,
@@ -11,6 +16,8 @@ export const BacklogView: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isSprintOpen, setIsSprintOpen] = useState(true);
   const [isBacklogPoolOpen, setIsBacklogPoolOpen] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const loadTasks = useCallback(async () => {
     const list = await ipc.getTasks(false);
@@ -23,6 +30,11 @@ export const BacklogView: React.FC = () => {
 
   const sprintTasks = tasks.filter((t) => t.status !== 'backlog');
   const backlogPoolTasks = tasks.filter((t) => t.status === 'backlog');
+
+  const handleRowClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsDrawerOpen(true);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125] text-[#b6c2cf] font-sans select-none">
@@ -42,7 +54,7 @@ export const BacklogView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <button className="px-3 py-1.5 rounded-[3px] bg-[#579dff] text-[#1d2125] font-semibold text-xs shadow-sm">
+          <button className="px-3 py-1.5 rounded-[3px] bg-[#579dff] text-[#1d2125] font-semibold text-xs shadow-sm hover:bg-[#85b8ff] transition-colors">
             Complete sprint
           </button>
         </div>
@@ -83,48 +95,57 @@ export const BacklogView: React.FC = () => {
           {/* Sprint Issues List */}
           {isSprintOpen && (
             <div className="divide-y divide-[#282e33]">
-              {sprintTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="px-4 py-2.5 flex items-center justify-between hover:bg-[#22272b]/50 text-xs transition-colors"
-                >
-                  <div className="flex items-center space-x-2.5 min-w-0 pr-2">
-                    <Zap className="w-3.5 h-3.5 text-[#8777d9] flex-shrink-0" />
-                    <span className="font-mono text-xs font-semibold text-[#8c9bab]">
-                      {task.task_key}
-                    </span>
-                    <span
-                      className={`truncate ${
-                        task.status === 'done' ? 'line-through text-[#738496]' : 'text-[#c7d1db]'
-                      }`}
-                    >
-                      {task.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-3 flex-shrink-0">
-                    {task.epic && (
-                      <span className="text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded bg-[#22272b] text-[#8c9bab]">
-                        {task.epic}
+              {sprintTasks.map((task) => {
+                const initials = getMemberInitials(task.assignee);
+                const color = getMemberColor(initials);
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => handleRowClick(task)}
+                    className="px-4 py-2.5 flex items-center justify-between hover:bg-[#22272b] text-xs transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                      <Zap className="w-3.5 h-3.5 text-[#8777d9] flex-shrink-0 fill-[#8777d9]/20" />
+                      <span className="font-mono text-xs font-semibold text-[#8c9bab] group-hover:text-[#579dff]">
+                        {task.task_key}
                       </span>
-                    )}
-                    <span
-                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-[3px] border ${
-                        task.status === 'done'
-                          ? 'bg-[#216e4e]/20 text-[#4bce97] border-[#216e4e]/40'
-                          : task.status === 'in_progress'
-                          ? 'bg-[#0055cc]/20 text-[#579dff] border-[#0055cc]/40'
-                          : 'bg-[#7f5f01]/20 text-[#f5cd47] border-[#7f5f01]/40'
-                      }`}
-                    >
-                      {task.status.replace('_', ' ')}
-                    </span>
-                    <div className="w-5 h-5 rounded-full bg-[#de350b] text-white text-[8px] font-bold flex items-center justify-center">
-                      {task.task_key.slice(-2)}
+                      <span
+                        className={`truncate ${
+                          task.status === 'done' ? 'line-through text-[#738496]' : 'text-[#c7d1db]'
+                        }`}
+                      >
+                        {task.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-3 flex-shrink-0">
+                      {task.epic && (
+                        <span className="text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded bg-[#22272b] text-[#8c9bab] border border-[#282e33]">
+                          {task.epic}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-[3px] border ${
+                          task.status === 'done'
+                            ? 'bg-[#216e4e]/20 text-[#4bce97] border-[#216e4e]/40'
+                            : task.status === 'in_progress'
+                            ? 'bg-[#0055cc]/20 text-[#579dff] border-[#0055cc]/40'
+                            : 'bg-[#7f5f01]/20 text-[#f5cd47] border-[#7f5f01]/40'
+                        }`}
+                      >
+                        {task.status.replace('_', ' ')}
+                      </span>
+                      <div
+                        className="w-5 h-5 rounded-full text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: color }}
+                        title={task.assignee || 'FN'}
+                      >
+                        {initials}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -153,11 +174,12 @@ export const BacklogView: React.FC = () => {
               {backlogPoolTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="px-4 py-2.5 flex items-center justify-between hover:bg-[#22272b]/50 text-xs transition-colors"
+                  onClick={() => handleRowClick(task)}
+                  className="px-4 py-2.5 flex items-center justify-between hover:bg-[#22272b] text-xs transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center space-x-2.5 min-w-0 pr-2">
-                    <Zap className="w-3.5 h-3.5 text-[#8777d9] flex-shrink-0" />
-                    <span className="font-mono text-xs font-semibold text-[#8c9bab]">
+                    <Zap className="w-3.5 h-3.5 text-[#8777d9] flex-shrink-0 fill-[#8777d9]/20" />
+                    <span className="font-mono text-xs font-semibold text-[#8c9bab] group-hover:text-[#579dff]">
                       {task.task_key}
                     </span>
                     <span className="truncate text-[#c7d1db]">{task.title}</span>
@@ -165,7 +187,7 @@ export const BacklogView: React.FC = () => {
 
                   <div className="flex items-center space-x-3 flex-shrink-0">
                     {task.epic && (
-                      <span className="text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded bg-[#22272b] text-[#8c9bab]">
+                      <span className="text-[9px] uppercase font-semibold px-1.5 py-0.2 rounded bg-[#22272b] text-[#8c9bab] border border-[#282e33]">
                         {task.epic}
                       </span>
                     )}
@@ -179,6 +201,25 @@ export const BacklogView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Task Detail Slide-Over Drawer */}
+      <TaskDetailDrawer
+        task={selectedTask}
+        isOpen={isDrawerOpen}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setSelectedTask(null);
+        }}
+        onTaskUpdated={(updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          setSelectedTask(updated);
+        }}
+        onTaskDeleted={(taskId) => {
+          setTasks((prev) => prev.filter((t) => t.id !== taskId));
+          setIsDrawerOpen(false);
+          setSelectedTask(null);
+        }}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Task, TaskPriority, TaskStatus } from '@maven/contracts';
+import { Task, TaskStatus } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
+import { TaskDetailDrawer } from '../tasks/TaskDetailDrawer';
 import {
   Search,
   Plus,
@@ -148,30 +149,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     setIsEditModalOpen(true);
   };
 
-  // Save edited task
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTask) return;
 
-    try {
-      await ipc.updateTask({
-        id: selectedTask.id,
-        title: selectedTask.title,
-        description: selectedTask.description || undefined,
-        status: selectedTask.status,
-        priority: selectedTask.priority,
-        starts_at: selectedTask.starts_at || undefined,
-        due_at: selectedTask.due_at || undefined,
-        epic: selectedTask.epic || undefined,
-        color: selectedTask.color || undefined,
-      });
-      setIsEditModalOpen(false);
-      await loadTasks();
-      showToast(`${selectedTask.task_key} updated`);
-    } catch {
-      showToast('Save failed');
-    }
-  };
 
   // Compute Gantt bar position across 151 days (Oct 1, 2026 - Feb 28, 2027)
   const getGanttBarStyle = (task: Task) => {
@@ -750,188 +728,26 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         </div>
       </footer>
 
-      {/* 6. JIRA ISSUE DETAIL / EDIT MODAL */}
-      {isEditModalOpen && selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#22272b] border border-[#282e33] rounded-[4px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-            {/* Header */}
-            <div className="px-5 py-3 border-b border-[#282e33] flex items-center justify-between bg-[#181b1f]">
-              <div className="flex items-center space-x-2">
-                <span className="font-mono text-xs font-bold text-[#579dff]">
-                  {selectedTask.task_key}
-                </span>
-                <span className="text-xs text-[#738496]">/</span>
-                <span className="text-xs text-[#8c9bab]">{selectedTask.epic || 'Task'}</span>
-              </div>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-[#8c9bab] hover:text-[#c7d1db] p-1 rounded-[3px]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSaveEdit} className="p-5 space-y-3.5 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                  Summary / Title
-                </label>
-                <input
-                  type="text"
-                  value={selectedTask.title}
-                  onChange={(e) =>
-                    setSelectedTask({ ...selectedTask, title: e.target.value })
-                  }
-                  className="w-full bg-[#1d2125] border border-[#282e33] text-sm text-[#c7d1db] rounded-[3px] px-3 py-2 focus:outline-none focus:border-[#579dff]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={selectedTask.status}
-                    onChange={(e) =>
-                      setSelectedTask({
-                        ...selectedTask,
-                        status: e.target.value as TaskStatus,
-                      })
-                    }
-                    className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] px-2.5 py-1.5 focus:outline-none focus:border-[#579dff]"
-                  >
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="done">Done</option>
-                    <option value="backlog">Backlog</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={selectedTask.priority}
-                    onChange={(e) =>
-                      setSelectedTask({
-                        ...selectedTask,
-                        priority: e.target.value as TaskPriority,
-                      })
-                    }
-                    className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] px-2.5 py-1.5 focus:outline-none focus:border-[#579dff]"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={selectedTask.starts_at ? selectedTask.starts_at.slice(0, 10) : ''}
-                    onChange={(e) =>
-                      setSelectedTask({
-                        ...selectedTask,
-                        starts_at: e.target.value ? new Date(e.target.value).toISOString() : null,
-                      })
-                    }
-                    className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] px-2.5 py-1.5 focus:outline-none focus:border-[#579dff]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={selectedTask.due_at ? selectedTask.due_at.slice(0, 10) : ''}
-                    onChange={(e) =>
-                      setSelectedTask({
-                        ...selectedTask,
-                        due_at: e.target.value ? new Date(e.target.value).toISOString() : null,
-                      })
-                    }
-                    className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] px-2.5 py-1.5 focus:outline-none focus:border-[#579dff]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                  Epic / Category
-                </label>
-                <input
-                  type="text"
-                  value={selectedTask.epic || ''}
-                  onChange={(e) =>
-                    setSelectedTask({ ...selectedTask, epic: e.target.value })
-                  }
-                  className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] px-3 py-1.5 focus:outline-none focus:border-[#579dff]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-[#8c9bab] mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={selectedTask.description || ''}
-                  onChange={(e) =>
-                    setSelectedTask({ ...selectedTask, description: e.target.value })
-                  }
-                  className="w-full bg-[#1d2125] border border-[#282e33] text-xs text-[#c7d1db] rounded-[3px] p-2.5 focus:outline-none focus:border-[#579dff]"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center justify-between border-t border-[#282e33]">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (confirm(`Delete issue ${selectedTask.task_key}?`)) {
-                      await ipc.softDeleteTask(selectedTask.id);
-                      setIsEditModalOpen(false);
-                      await loadTasks();
-                      showToast(`${selectedTask.task_key} deleted`);
-                    }
-                  }}
-                  className="text-xs text-[#ff5630] hover:underline"
-                >
-                  Delete issue
-                </button>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-3 py-1.5 rounded-[3px] bg-[#282e33] text-xs text-[#c7d1db] hover:bg-[#3b444c] transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 rounded-[3px] bg-[#579dff] hover:bg-[#85b8ff] text-[#1d2125] font-semibold text-xs transition-colors"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 6. JIRA ISSUE DETAIL DRAWER */}
+      <TaskDetailDrawer
+        task={selectedTask}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTask(null);
+        }}
+        onTaskUpdated={async (updated) => {
+          setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          setSelectedTask(updated);
+          showToast(`${updated.task_key} updated`);
+        }}
+        onTaskDeleted={async (taskId) => {
+          setTasks((prev) => prev.filter((t) => t.id !== taskId));
+          setIsEditModalOpen(false);
+          setSelectedTask(null);
+          showToast('Issue moved to Trash');
+        }}
+      />
     </div>
   );
 };

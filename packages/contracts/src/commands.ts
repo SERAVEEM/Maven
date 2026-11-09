@@ -3,7 +3,7 @@
  * Used across Presentation Layer and Host Backend (Tauri IPC)
  */
 
-import { TaskPriority, TaskStatus } from './entities.js';
+import { Subtask, TaskComment, TaskPriority, TaskStatus } from './entities.js';
 
 // Task Commands
 export interface CreateTaskDto {
@@ -18,6 +18,9 @@ export interface CreateTaskDto {
   due_timezone?: string;
   epic?: string;
   color?: string;
+  assignee?: string | null;
+  subtasks?: Subtask[];
+  comments?: TaskComment[];
 }
 
 export interface UpdateTaskDto {
@@ -34,6 +37,9 @@ export interface UpdateTaskDto {
   completed_at?: string | null;
   epic?: string | null;
   color?: string | null;
+  assignee?: string | null;
+  subtasks?: Subtask[];
+  comments?: TaskComment[];
 }
 
 export interface TaskFilterDto {

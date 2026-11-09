@@ -191,6 +191,9 @@ class MockIpcProvider implements IIpcClient {
           starts_at: item.starts_at ?? null,
           epic: item.epic ?? null,
           color: item.color ?? '#6366f1',
+          assignee: item.assignee ?? null,
+          subtasks: item.subtasks ?? [],
+          comments: item.comments ?? [],
         }));
       }
       if (p) this.projects = JSON.parse(p);
@@ -210,9 +213,12 @@ class MockIpcProvider implements IIpcClient {
         });
       }
 
-      // Ensure GPL tasks exist for the Jira Timeline view
+      // Ensure GPL tasks exist for the Jira Timeline view (refresh if missing or lacking subtasks)
       const hasGpl21 = this.tasks.some((t) => t.task_key === 'GPL-21');
-      if (!this.tasks.some((t) => t.task_key && t.task_key.startsWith('GPL-')) || !hasGpl21) {
+      const hasSubtasks = this.tasks.some(
+        (t) => t.task_key && t.task_key.startsWith('GPL-') && (t.subtasks?.length ?? 0) > 0
+      );
+      if (!this.tasks.some((t) => t.task_key && t.task_key.startsWith('GPL-')) || !hasGpl21 || !hasSubtasks) {
         // Remove partial old GPL tasks if any to refresh with authentic 13 tasks
         this.tasks = this.tasks.filter((t) => !t.task_key || !t.task_key.startsWith('GPL-'));
 
@@ -231,6 +237,26 @@ class MockIpcProvider implements IIpcClient {
             completed_at: '2026-11-06T17:00:00Z',
             epic: 'Design Sprint',
             color: '#8777d9',
+            assignee: 'Alex Chen',
+            subtasks: [
+              { id: 'sub-4-1', title: 'Review design tokens & typography scale', completed: true },
+              { id: 'sub-4-2', title: 'Audit color contrast ratio (WCAG AA)', completed: true },
+              { id: 'sub-4-3', title: 'Dynamic Island interaction wireframes', completed: true },
+            ],
+            comments: [
+              {
+                id: 'comm-4-1',
+                author: 'Alex Chen',
+                text: 'Design tokens finalized with Jira Dark Mode contrast standards.',
+                created_at: '2026-11-04T10:15:00Z',
+              },
+              {
+                id: 'comm-4-2',
+                author: 'Sarah Miller',
+                text: 'WCAG AA verified across all surface and border tokens. Approved.',
+                created_at: '2026-11-05T14:30:00Z',
+              },
+            ],
             created_at: '2026-10-10T09:00:00Z',
             updated_at: '2026-11-06T17:00:00Z',
             deleted_at: null,
@@ -249,6 +275,19 @@ class MockIpcProvider implements IIpcClient {
             completed_at: '2026-11-14T16:00:00Z',
             epic: 'Project Specs',
             color: '#00b8d9',
+            assignee: 'Budi Santoso',
+            subtasks: [
+              { id: 'sub-5-1', title: 'Draft Product Requirements Document (PRD)', completed: true },
+              { id: 'sub-5-2', title: 'Define SQLite DDL schema with FTS5 triggers', completed: true },
+            ],
+            comments: [
+              {
+                id: 'comm-5-1',
+                author: 'Budi Santoso',
+                text: 'All schema constraints and indexes documented in DATABASE.md.',
+                created_at: '2026-11-12T09:00:00Z',
+              },
+            ],
             created_at: '2026-10-18T09:00:00Z',
             updated_at: '2026-11-14T16:00:00Z',
             deleted_at: null,
@@ -267,6 +306,27 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Frontend Core',
             color: '#388bff',
+            assignee: 'Frontend Dev',
+            subtasks: [
+              { id: 'sub-19-1', title: 'Initialize Vite React 19 + Tailwind v4 toolchain', completed: true },
+              { id: 'sub-19-2', title: 'Review design tokens & dark theme tokens', completed: true },
+              { id: 'sub-19-3', title: 'Implement Jira Task Detail Drawer component', completed: false },
+              { id: 'sub-19-4', title: 'Wire mock IPC handlers for subtasks & comments', completed: false },
+            ],
+            comments: [
+              {
+                id: 'comm-19-1',
+                author: 'Frontend Dev',
+                text: 'Tailwind v4 configured with Atlassian Design System tokens.',
+                created_at: '2026-11-12T09:45:00Z',
+              },
+              {
+                id: 'comm-19-2',
+                author: 'PM Lead',
+                text: 'Ensure the detail drawer supports inline subtask completion toggles.',
+                created_at: '2026-11-14T11:00:00Z',
+              },
+            ],
             created_at: '2026-11-01T09:00:00Z',
             updated_at: '2026-11-16T12:00:00Z',
             deleted_at: null,
@@ -285,6 +345,20 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Backend Core',
             color: '#ffab00',
+            assignee: 'Systems Engineer',
+            subtasks: [
+              { id: 'sub-20-1', title: 'Setup Tauri 2 invoke handlers', completed: true },
+              { id: 'sub-20-2', title: 'Implement WAL journal mode and busy timeout', completed: true },
+              { id: 'sub-20-3', title: 'Add Windows system tray & close-to-tray handling', completed: false },
+            ],
+            comments: [
+              {
+                id: 'comm-20-1',
+                author: 'Systems Engineer',
+                text: 'Rusqlite configured with WAL mode and synchronous=NORMAL for ACID safety.',
+                created_at: '2026-11-10T14:20:00Z',
+              },
+            ],
             created_at: '2026-11-05T09:00:00Z',
             updated_at: '2026-11-16T14:00:00Z',
             deleted_at: null,
@@ -303,6 +377,13 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Backend Core',
             color: '#8777d9',
+            assignee: 'Systems Engineer',
+            subtasks: [
+              { id: 'sub-21-1', title: 'Draft v1 migration script', completed: true },
+              { id: 'sub-21-2', title: 'FTS5 triggers for note search index', completed: true },
+              { id: 'sub-21-3', title: 'Benchmark foreign key cascade integrity', completed: false },
+            ],
+            comments: [],
             created_at: '2026-11-08T09:00:00Z',
             updated_at: '2026-11-16T15:00:00Z',
             deleted_at: null,
@@ -321,6 +402,20 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Design System',
             color: '#ffab00',
+            assignee: 'Alex Chen',
+            subtasks: [
+              { id: 'sub-31-1', title: 'Hero presentation wireframe & copy', completed: false },
+              { id: 'sub-31-2', title: 'Audit color contrast on dark backgrounds', completed: false },
+              { id: 'sub-31-3', title: 'Interactive feature preview components', completed: false },
+            ],
+            comments: [
+              {
+                id: 'comm-31-1',
+                author: 'Alex Chen',
+                text: 'Figma mockups initialized with Jira dark styling.',
+                created_at: '2026-11-11T16:20:00Z',
+              },
+            ],
             created_at: '2026-11-10T09:00:00Z',
             updated_at: '2026-11-10T09:00:00Z',
             deleted_at: null,
@@ -339,6 +434,11 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Auth Module',
             color: '#388bff',
+            assignee: 'Sarah Miller',
+            subtasks: [
+              { id: 'sub-32-1', title: 'Design user login modal and session expiry states', completed: false },
+            ],
+            comments: [],
             created_at: '2026-11-10T09:00:00Z',
             updated_at: '2026-11-10T09:00:00Z',
             deleted_at: null,
@@ -357,6 +457,11 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Design System',
             color: '#ff5630',
+            assignee: 'Alex Chen',
+            subtasks: [
+              { id: 'sub-33-1', title: 'Define Jira banner alert and toast components', completed: false },
+            ],
+            comments: [],
             created_at: '2026-11-12T09:00:00Z',
             updated_at: '2026-11-12T09:00:00Z',
             deleted_at: null,
@@ -375,6 +480,11 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Auth Module',
             color: '#00b8d9',
+            assignee: 'Systems Engineer',
+            subtasks: [
+              { id: 'sub-50-1', title: 'Evaluate Argon2id vs PBKDF2 password hashing', completed: false },
+            ],
+            comments: [],
             created_at: '2026-11-15T09:00:00Z',
             updated_at: '2026-11-15T09:00:00Z',
             deleted_at: null,
@@ -393,6 +503,9 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Auth Module',
             color: '#ffab00',
+            assignee: 'Frontend Dev',
+            subtasks: [],
+            comments: [],
             created_at: '2026-11-15T09:00:00Z',
             updated_at: '2026-11-15T09:00:00Z',
             deleted_at: null,
@@ -411,6 +524,9 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Web Portal',
             color: '#388bff',
+            assignee: 'Frontend Dev',
+            subtasks: [],
+            comments: [],
             created_at: '2026-11-15T09:00:00Z',
             updated_at: '2026-11-15T09:00:00Z',
             deleted_at: null,
@@ -429,6 +545,9 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Web Portal',
             color: '#8777d9',
+            assignee: 'Alex Chen',
+            subtasks: [],
+            comments: [],
             created_at: '2026-11-15T09:00:00Z',
             updated_at: '2026-11-15T09:00:00Z',
             deleted_at: null,
@@ -447,6 +566,9 @@ class MockIpcProvider implements IIpcClient {
             completed_at: null,
             epic: 'Core App',
             color: '#ff5630',
+            assignee: 'Frontend Dev',
+            subtasks: [],
+            comments: [],
             created_at: '2026-11-15T09:00:00Z',
             updated_at: '2026-11-15T09:00:00Z',
             deleted_at: null,
@@ -509,6 +631,19 @@ class MockIpcProvider implements IIpcClient {
         completed_at: '2026-11-09T17:00:00Z',
         epic: 'Design',
         color: '#8b5cf6',
+        assignee: 'Alex Chen',
+        subtasks: [
+          { id: 'sub-mvn-4-1', title: 'Review design tokens & typography scale', completed: true },
+          { id: 'sub-mvn-4-2', title: 'Audit color contrast ratio (WCAG AA)', completed: true },
+        ],
+        comments: [
+          {
+            id: 'comm-mvn-4-1',
+            author: 'Alex Chen',
+            text: 'Design tokens aligned with ADS Dark Mode specification.',
+            created_at: '2026-11-08T10:00:00Z',
+          },
+        ],
         created_at: '2026-11-01T08:30:00Z',
         updated_at: '2026-11-09T17:00:00Z',
         deleted_at: null,
@@ -527,6 +662,9 @@ class MockIpcProvider implements IIpcClient {
         completed_at: '2026-11-13T16:00:00Z',
         epic: 'Management',
         color: '#10b981',
+        assignee: 'Budi Santoso',
+        subtasks: [],
+        comments: [],
         created_at: '2026-11-03T08:30:00Z',
         updated_at: '2026-11-13T16:00:00Z',
         deleted_at: null,
@@ -545,6 +683,12 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'Frontend',
         color: '#3b82f6',
+        assignee: 'Frontend Dev',
+        subtasks: [
+          { id: 'sub-mvn-19-1', title: 'Initialize Vite React 19 + Tailwind v4 toolchain', completed: true },
+          { id: 'sub-mvn-19-2', title: 'Implement Jira Task Detail Drawer component', completed: false },
+        ],
+        comments: [],
         created_at: '2026-11-12T08:30:00Z',
         updated_at: '2026-11-16T10:00:00Z',
         deleted_at: null,
@@ -563,6 +707,9 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'Backend',
         color: '#f59e0b',
+        assignee: 'Systems Engineer',
+        subtasks: [],
+        comments: [],
         created_at: '2026-11-15T08:30:00Z',
         updated_at: '2026-11-18T14:00:00Z',
         deleted_at: null,
@@ -581,6 +728,12 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'Design',
         color: '#ec4899',
+        assignee: 'Alex Chen',
+        subtasks: [
+          { id: 'sub-mvn-31-1', title: 'Hero presentation wireframe & copy', completed: false },
+          { id: 'sub-mvn-31-2', title: 'Audit color contrast on dark backgrounds', completed: false },
+        ],
+        comments: [],
         created_at: '2026-11-20T09:00:00Z',
         updated_at: '2026-11-20T09:00:00Z',
         deleted_at: null,
@@ -599,6 +752,9 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'Frontend',
         color: '#6366f1',
+        assignee: null,
+        subtasks: [],
+        comments: [],
         created_at: '2026-11-20T10:00:00Z',
         updated_at: '2026-11-20T10:00:00Z',
         deleted_at: null,
@@ -617,6 +773,9 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'AI Engine',
         color: '#06b6d4',
+        assignee: null,
+        subtasks: [],
+        comments: [],
         created_at: '2026-11-21T09:00:00Z',
         updated_at: '2026-11-21T09:00:00Z',
         deleted_at: null,
@@ -635,6 +794,9 @@ class MockIpcProvider implements IIpcClient {
         completed_at: null,
         epic: 'Backend',
         color: '#f97316',
+        assignee: null,
+        subtasks: [],
+        comments: [],
         created_at: '2026-11-21T11:00:00Z',
         updated_at: '2026-11-21T11:00:00Z',
         deleted_at: null,
@@ -693,6 +855,9 @@ class MockIpcProvider implements IIpcClient {
       completed_at: null,
       epic: dto.epic || null,
       color: dto.color || '#3b82f6',
+      assignee: dto.assignee ?? null,
+      subtasks: dto.subtasks ?? [],
+      comments: dto.comments ?? [],
       created_at: now,
       updated_at: now,
       deleted_at: null,
@@ -720,6 +885,9 @@ class MockIpcProvider implements IIpcClient {
       due_timezone: dto.due_timezone !== undefined ? dto.due_timezone : existing.due_timezone,
       epic: dto.epic !== undefined ? dto.epic : existing.epic,
       color: dto.color !== undefined ? dto.color : existing.color,
+      assignee: dto.assignee !== undefined ? dto.assignee : existing.assignee,
+      subtasks: dto.subtasks !== undefined ? dto.subtasks : existing.subtasks,
+      comments: dto.comments !== undefined ? dto.comments : existing.comments,
       completed_at:
         dto.status === 'done' && !existing.completed_at
           ? now

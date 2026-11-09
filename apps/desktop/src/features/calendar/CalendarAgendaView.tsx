@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarEvent } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
-import { Calendar, Clock, MapPin, Plus } from 'lucide-react';
+import { Clock, MapPin, Plus } from 'lucide-react';
 
 export const CalendarAgendaView: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -40,51 +40,54 @@ export const CalendarAgendaView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full">
-      <div className="pb-4 border-b border-slate-800">
-        <h2 className="text-2xl font-bold tracking-tight text-white">Calendar Agenda</h2>
-        <p className="text-sm text-slate-400">
-          Jadwal aktivitas dan agenda mendatang dalam tampilan kronologis ringkas (MVP v0.1)
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
+      <div className="pb-4 border-b border-[#282e33]">
+        <h2 className="text-xl font-bold tracking-tight text-[#c7d1db]">Calendar Agenda</h2>
+        <p className="text-xs text-[#8c9bab] mt-0.5">
+          Chronological schedule and sprint milestone calendar
         </p>
       </div>
 
       {/* Quick Add Event */}
-      <form onSubmit={handleCreate} className="mt-5 p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex flex-wrap gap-3">
+      <form
+        onSubmit={handleCreate}
+        className="mt-4 p-3.5 rounded-[4px] border border-[#282e33] bg-[#161a1d] flex flex-wrap gap-2.5"
+      >
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Judul acara / agenda..."
-          className="flex-1 min-w-[200px] bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Event summary..."
+          className="flex-1 min-w-[200px] bg-[#22272b] border border-[#282e33] rounded-[3px] px-3 py-1.5 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
         />
         <input
           type="datetime-local"
           value={startsAt}
           onChange={(e) => setStartsAt(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-[#22272b] border border-[#282e33] rounded-[3px] px-2.5 py-1.5 text-xs text-[#c7d1db] focus:outline-none focus:border-[#579dff]"
         />
         <input
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          placeholder="Lokasi (opsional)"
-          className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36"
+          placeholder="Location (optional)"
+          className="bg-[#22272b] border border-[#282e33] rounded-[3px] px-2.5 py-1.5 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff] w-36"
         />
         <button
           type="submit"
           disabled={!title.trim() || !startsAt || isSubmitting}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all shadow"
+          className="bg-[#579dff] hover:bg-[#85b8ff] disabled:opacity-50 text-[#1d2125] px-3.5 py-1.5 rounded-[3px] text-xs font-semibold flex items-center gap-1 transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          <span>Jadwalkan</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Schedule</span>
         </button>
       </form>
 
       {/* Events Timeline */}
-      <div className="mt-6 flex-1 overflow-y-auto space-y-3 pr-1">
+      <div className="mt-5 flex-1 overflow-y-auto space-y-2 pr-1">
         {events.length === 0 ? (
-          <div className="text-center py-16 text-slate-500 text-sm">
-            Belum ada agenda kalender yang dijadwalkan.
+          <div className="text-center py-16 text-[#738496] text-xs">
+            No events scheduled yet.
           </div>
         ) : (
           events.map((evt) => {
@@ -92,28 +95,28 @@ export const CalendarAgendaView: React.FC = () => {
             return (
               <div
                 key={evt.id}
-                className="p-4 rounded-xl border border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-all flex items-start justify-between"
+                className="p-3.5 rounded-[4px] border border-[#282e33] bg-[#161a1d] hover:border-[#3b444c] transition-colors flex items-start justify-between"
               >
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col items-center justify-center text-indigo-400 flex-shrink-0">
-                    <span className="text-[10px] uppercase font-bold">
+                <div className="flex items-start space-x-3.5">
+                  <div className="w-10 h-10 rounded-[3px] bg-[#22272b] border border-[#282e33] flex flex-col items-center justify-center text-[#579dff] flex-shrink-0">
+                    <span className="text-[9px] uppercase font-bold text-[#8c9bab]">
                       {dateObj.toLocaleDateString(undefined, { month: 'short' })}
                     </span>
-                    <span className="text-base font-black leading-none">{dateObj.getDate()}</span>
+                    <span className="text-sm font-bold leading-none text-[#c7d1db]">{dateObj.getDate()}</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white text-base">{evt.title}</h3>
+                    <h3 className="font-semibold text-[#c7d1db] text-xs">{evt.title}</h3>
                     {evt.description && (
-                      <p className="text-xs text-slate-400 mt-0.5">{evt.description}</p>
+                      <p className="text-[11px] text-[#8c9bab] mt-0.5">{evt.description}</p>
                     )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                      <span className="flex items-center gap-1 text-slate-300">
-                        <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#738496]">
+                      <span className="flex items-center gap-1 text-[#8c9bab]">
+                        <Clock className="w-3 h-3 text-[#ffab00]" />
                         {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {evt.location && (
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                          <MapPin className="w-3 h-3 text-[#4bce97]" />
                           {evt.location}
                         </span>
                       )}
@@ -128,4 +131,3 @@ export const CalendarAgendaView: React.FC = () => {
     </div>
   );
 };
-

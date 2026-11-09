@@ -1,124 +1,518 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  CalendarRange,
+  Kanban,
+  ListTodo,
   CheckSquare,
-  FolderKanban,
   Calendar,
   FileText,
-  MessageSquareCode,
-  ShieldCheck,
-  Cpu,
-  Database,
+  Bot,
+  Search,
+  Bell,
+  Settings,
+  HelpCircle,
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  FolderKanban,
+  Layers,
+  Users,
+  Target,
+  FileCode,
+  Sliders,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Palette,
+  Check,
+  Sparkles,
+  X,
 } from 'lucide-react';
 
-export type NavTab = 'tasks' | 'projects' | 'calendar' | 'notes' | 'chat';
+export type NavTab =
+  | 'timeline'
+  | 'board'
+  | 'backlog'
+  | 'list'
+  | 'calendar'
+  | 'docs'
+  | 'chat'
+  | 'projects';
+
+export interface JiraTheme {
+  id: string;
+  name: string;
+  subtitle: string;
+  gradient: string;
+  accent: string;
+  previewBg: string;
+}
+
+// ponytail: ambient cover glow wallpapers matching Jira spaces
+export const JIRA_THEMES: JiraTheme[] = [
+  {
+    id: 'nebula',
+    name: 'Cosmic Nebula',
+    subtitle: 'Warm reddish glow (Default)',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(195, 45, 30, 0.22), transparent 72%)',
+    accent: '#de350b',
+    previewBg: '#4a1d1d',
+  },
+  {
+    id: 'charcoal',
+    name: 'Jira Charcoal',
+    subtitle: 'Classic clean dark canvas',
+    gradient: 'none',
+    accent: '#8c9bab',
+    previewBg: '#22272b',
+  },
+  {
+    id: 'ocean',
+    name: 'Deep Pacific',
+    subtitle: 'Electric midnight blue aura',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(59, 130, 246, 0.20), transparent 72%)',
+    accent: '#579dff',
+    previewBg: '#1c2e4a',
+  },
+  {
+    id: 'aurora',
+    name: 'Boreal Aurora',
+    subtitle: 'Nordic emerald ambient',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(16, 185, 129, 0.18), transparent 72%)',
+    accent: '#10b981',
+    previewBg: '#1b3b2f',
+  },
+  {
+    id: 'sunset',
+    name: 'Solar Amber',
+    subtitle: 'Warm dusk twilight glow',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(245, 158, 11, 0.18), transparent 72%)',
+    accent: '#f59e0b',
+    previewBg: '#45311b',
+  },
+  {
+    id: 'amethyst',
+    name: 'Starlight Violet',
+    subtitle: 'Cosmic purple mystery',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(147, 51, 234, 0.20), transparent 72%)',
+    accent: '#a855f7',
+    previewBg: '#361e47',
+  },
+];
 
 interface AppLayoutProps {
   currentTab: NavTab;
   onTabChange: (tab: NavTab) => void;
+  onOpenCreate?: () => void;
   children: React.ReactNode;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   currentTab,
   onTabChange,
+  onOpenCreate,
   children,
 }) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isPlanningOpen, setIsPlanningOpen] = useState(true);
+
+  // ponytail: theme persistence in localStorage
+  const [bgTheme, setBgTheme] = useState<string>(() => {
+    return localStorage.getItem('maven_jira_bg_theme') || 'nebula';
+  });
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const themePopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themePopoverRef.current && !themePopoverRef.current.contains(e.target as Node)) {
+        setIsThemeOpen(false);
+      }
+    };
+    if (isThemeOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isThemeOpen]);
+
+  const handleSelectTheme = (themeId: string) => {
+    setBgTheme(themeId);
+    localStorage.setItem('maven_jira_bg_theme', themeId);
+  };
+
+  const currentTheme = JIRA_THEMES.find((t) => t.id === bgTheme) || JIRA_THEMES[0]!;
+
   const navItems = [
-    { id: 'tasks' as NavTab, label: 'Tasks', icon: CheckSquare, badge: 'Core' },
-    { id: 'projects' as NavTab, label: 'Projects', icon: FolderKanban },
-    { id: 'calendar' as NavTab, label: 'Calendar Agenda', icon: Calendar },
-    { id: 'notes' as NavTab, label: 'Notes (FTS5)', icon: FileText },
-    { id: 'chat' as NavTab, label: 'AI Assistant', icon: MessageSquareCode, badge: 'NLP' },
+    { id: 'timeline' as NavTab, label: 'Timeline', icon: CalendarRange, badge: null },
+    { id: 'board' as NavTab, label: 'Board', icon: Kanban, badge: null },
+    { id: 'backlog' as NavTab, label: 'Backlog', icon: ListTodo, badge: '13' },
+    { id: 'list' as NavTab, label: 'List', icon: CheckSquare, badge: null },
+    { id: 'calendar' as NavTab, label: 'Calendar', icon: Calendar, badge: null },
+    { id: 'docs' as NavTab, label: 'Docs', icon: FileText, badge: null },
+    { id: 'chat' as NavTab, label: 'AI Assistant', icon: Bot, badge: 'NLP' },
   ];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
-      {/* Desktop Sidebar */}
-      <aside className="w-64 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/60 backdrop-blur-md">
-        {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 font-bold text-lg text-white">
-              M
-            </div>
-            <div>
-              <h1 className="font-bold tracking-tight text-white flex items-center gap-1.5">
-                MAVEN
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  v0.1
-                </span>
-              </h1>
-              <p className="text-xs text-slate-400">Personal AI Assistant</p>
-            </div>
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#1d2125] text-[#b6c2cf] select-none font-sans">
+      {/* 1. TOP GLOBAL NAVIGATION HEADER (Height 48px, bg #161a1d, border-b #282e33) */}
+      <header className="h-12 flex-shrink-0 bg-[#161a1d] border-b border-[#282e33] px-3 flex items-center justify-between text-xs z-40">
+        {/* Left: 9-dot app switcher, Jira logo, dropdowns, "+ Create" button */}
+        <div className="flex items-center space-x-2">
+          {/* 9-dot App Switcher icon */}
+          <button
+            className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
+            title="Atlassian App Switcher"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <circle cx="2.5" cy="2.5" r="1.5" />
+              <circle cx="8" cy="2.5" r="1.5" />
+              <circle cx="13.5" cy="2.5" r="1.5" />
+              <circle cx="2.5" cy="8" r="1.5" />
+              <circle cx="8" cy="8" r="1.5" />
+              <circle cx="13.5" cy="8" r="1.5" />
+              <circle cx="2.5" cy="13.5" r="1.5" />
+              <circle cx="8" cy="13.5" r="1.5" />
+              <circle cx="13.5" cy="13.5" r="1.5" />
+            </svg>
+          </button>
+
+          {/* Jira folded diamonds logo + text "Jira" */}
+          <div className="flex items-center space-x-1.5 px-1 py-1 mr-1">
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M11.9 1.5C11.9 5.5 8.7 8.7 4.7 8.7H2.2c-.4 0-.7.3-.7.7v3.2c0 4 3.2 7.2 7.2 7.2h3.2c.4 0 .7-.3.7-.7V17c0-4 3.2-7.2 7.2-7.2h2.5c.4 0 .7-.3.7-.7V5.9c0-4-3.2-7.2-7.2-7.2h-3.9z"
+                fill="#579dff"
+              />
+            </svg>
+            <span className="font-bold text-sm tracking-tight text-[#b6c2cf]">Jira</span>
           </div>
+
+          {/* Jira Navigation dropdown links */}
+          <div className="hidden md:flex items-center space-x-0.5 text-[#8c9bab]">
+            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
+              <span>Your work</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+            <button
+              onClick={() => onTabChange('projects')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors ${
+                currentTab === 'projects' ? 'bg-[#22272b] text-[#579dff]' : ''
+              }`}
+            >
+              <span>Projects</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
+              <span>Filters</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
+              <span>Dashboards</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
+              <span>Teams</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
+              <span>Apps</span>
+              <ChevronDown className="w-3 h-3 text-[#738496]" />
+            </button>
+          </div>
+
+          {/* Jira Standard Blue "+ Create" Button */}
+          <button
+            onClick={onOpenCreate}
+            className="bg-[#579dff] hover:bg-[#85b8ff] active:bg-[#388bff] text-[#1d2125] font-semibold text-xs px-3 py-1 rounded-[3px] flex items-center gap-1 transition-colors ml-1 shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Create</span>
+          </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      isActive
-                        ? 'bg-indigo-700/80 text-indigo-100'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}
+        {/* Right: Global search bar, notifications with orange "9+" badge, settings, user avatar */}
+        <div className="flex items-center space-x-2">
+          {/* Global Search Bar */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-[#738496] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search"
+              className="bg-[#22272b] border border-[#282e33] text-xs w-72 md:w-80 text-[#b6c2cf] placeholder-[#738496] rounded-[3px] pl-8 pr-3 py-1 focus:outline-none focus:border-[#579dff] focus:ring-1 focus:ring-[#579dff] transition-all"
+            />
+          </div>
+
+          {/* Notifications Bell with Orange Badge (9+) */}
+          <button
+            className="relative p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-0.5 right-0.5 bg-[#de350b] text-white text-[9px] font-bold rounded-full px-1 min-w-[15px] h-[14px] flex items-center justify-center leading-none border border-[#161a1d]">
+              9+
+            </span>
+          </button>
+
+          {/* Workspace Background Wallpaper / Glow Switcher */}
+          <div className="relative" ref={themePopoverRef}>
+            <button
+              onClick={() => setIsThemeOpen((prev) => !prev)}
+              className={`p-1.5 rounded-[3px] transition-colors flex items-center gap-1.5 ${
+                isThemeOpen
+                  ? 'bg-[#22272b] text-[#579dff]'
+                  : 'hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf]'
+              }`}
+              title="Workspace Wallpaper Glow"
+            >
+              <Palette className="w-4 h-4" />
+              <span
+                className="w-2 h-2 rounded-full ring-1 ring-[#161a1d] shadow-sm"
+                style={{ backgroundColor: currentTheme.accent }}
+              />
+            </button>
+
+            {/* Jira Theme Popover Dropdown */}
+            {isThemeOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#22272b] border border-[#282e33] rounded-[4px] shadow-2xl z-50 overflow-hidden">
+                <div className="p-2.5 border-b border-[#282e33] flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[#c7d1db] font-semibold text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-[#579dff]" />
+                    <span>Workspace Wallpaper</span>
+                  </div>
+                  <button
+                    onClick={() => setIsThemeOpen(false)}
+                    className="text-[#738496] hover:text-[#b6c2cf] p-0.5"
                   >
-                    {item.badge}
-                  </span>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto">
+                  {JIRA_THEMES.map((theme) => {
+                    const isSelected = theme.id === bgTheme;
+                    return (
+                      <button
+                        key={theme.id}
+                        onClick={() => {
+                          handleSelectTheme(theme.id);
+                          setIsThemeOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-[3px] text-left transition-colors ${
+                          isSelected
+                            ? 'bg-[#282e33] border border-[#579dff]/40 text-[#c7d1db]'
+                            : 'hover:bg-[#1d2125] text-[#8c9bab] hover:text-[#c7d1db] border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-4 h-4 rounded-full border border-[#282e33] flex-shrink-0 shadow-sm"
+                            style={{ backgroundColor: theme.accent }}
+                          />
+                          <div>
+                            <div className="text-xs font-medium leading-tight">{theme.name}</div>
+                            <div className="text-[10px] text-[#738496] mt-0.5">{theme.subtitle}</div>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#579dff] flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Settings cog */}
+          <button
+            className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Help question circle */}
+          <button
+            className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
+            title="Help"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
+          {/* User Avatar Circle: "FN" with deep orange background */}
+          <div
+            className="w-7 h-7 rounded-full bg-[#de350b] flex items-center justify-center text-white text-xs font-bold ring-2 ring-[#282e33] cursor-pointer hover:brightness-110 transition-all flex-shrink-0"
+            title="Fawwaz Naufal (FN)"
+          >
+            FN
+          </div>
+        </div>
+      </header>
+
+      {/* 2. BODY SPLIT: Left Sidebar + Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* LEFT SIDEBAR (bg #181b1f, border-r #22272b, text #8c9bab) */}
+        <aside
+          className={`${
+            isSidebarCollapsed ? 'w-12' : 'w-60'
+          } flex-shrink-0 flex flex-col bg-[#181b1f] border-r border-[#22272b] text-xs transition-all duration-200 overflow-hidden relative z-20`}
+        >
+          {/* Header: Spaces > Perspective x GPL */}
+          <div className="p-3 border-b border-[#22272b] flex items-center justify-between">
+            {!isSidebarCollapsed ? (
+              <div className="flex items-center space-x-2.5 min-w-0">
+                {/* Active Space Green Square Icon */}
+                <div className="w-7 h-7 rounded-[3px] bg-[#216e4e] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
+                  P
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase font-bold text-[#738496] tracking-wider leading-none mb-0.5">
+                    Spaces
+                  </div>
+                  <h2 className="font-semibold text-xs text-[#c7d1db] truncate leading-tight">
+                    Perspective x GPL
+                  </h2>
+                  <div className="text-[10px] text-[#738496] truncate">Software project</div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-7 h-7 mx-auto rounded-[3px] bg-[#216e4e] flex items-center justify-center text-white font-bold text-xs">
+                P
+              </div>
+            )}
+
+            {/* Collapse toggle button */}
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-1 rounded-[3px] hover:bg-[#22272b] text-[#738496] hover:text-[#b6c2cf] transition-colors"
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="w-3.5 h-3.5" />
+              ) : (
+                <PanelLeftClose className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Navigation Links List */}
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+            {/* Section: PLANNING */}
+            {!isSidebarCollapsed && (
+              <button
+                onClick={() => setIsPlanningOpen(!isPlanningOpen)}
+                className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#738496] hover:text-[#b6c2cf]"
+              >
+                <span>Planning</span>
+                {isPlanningOpen ? (
+                  <ChevronDown className="w-3 h-3" />
+                ) : (
+                  <ChevronRight className="w-3 h-3" />
                 )}
               </button>
-            );
-          })}
-        </nav>
+            )}
 
-        {/* System & Runtime Health Indicator */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/40 text-xs text-slate-400 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-slate-400">
-              <Database className="w-3.5 h-3.5 text-emerald-400" />
-              SQLite Local
-            </span>
-            <span className="text-[11px] text-emerald-400 font-medium">FTS5 Active</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-slate-400">
-              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-              NLP Engine
-            </span>
-            <span className="text-[11px] text-indigo-400 font-medium">&lt;2ms Rule Parser</span>
-          </div>
-          <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-            <span className="flex items-center gap-1.5 text-slate-500">
-              <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
-              Offline Privacy
-            </span>
-            <span className="text-[10px] text-slate-500">Single-Device</span>
-          </div>
-        </div>
-      </aside>
+            {isPlanningOpen &&
+              navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    title={isSidebarCollapsed ? item.label : undefined}
+                    className={`w-full flex items-center ${
+                      isSidebarCollapsed ? 'justify-center px-1' : 'justify-between px-2.5'
+                    } py-1.5 rounded-[3px] text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#22272b] text-[#579dff] font-semibold border-l-[3px] border-[#579dff]'
+                        : 'text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 truncate">
+                      <Icon
+                        className={`w-4 h-4 flex-shrink-0 ${
+                          isActive ? 'text-[#579dff]' : 'text-[#8c9bab]'
+                        }`}
+                      />
+                      {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                    </div>
 
-      {/* Main Work Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
-        {children}
-      </main>
+                    {!isSidebarCollapsed && item.badge && (
+                      <span
+                        className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${
+                          isActive
+                            ? 'bg-[#579dff]/20 text-[#579dff]'
+                            : 'bg-[#22272b] text-[#738496]'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+            {/* Bottom Tools Section */}
+            {!isSidebarCollapsed && (
+              <div className="pt-3 mt-2 border-t border-[#22272b] space-y-0.5">
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#738496]">
+                  Tools & Spaces
+                </div>
+
+                <button
+                  onClick={() => onTabChange('projects')}
+                  className={`w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs transition-colors ${
+                    currentTab === 'projects'
+                      ? 'bg-[#22272b] text-[#579dff] font-semibold border-l-[3px] border-[#579dff]'
+                      : 'text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60'
+                  }`}
+                >
+                  <FolderKanban className="w-4 h-4 text-[#8c9bab]" />
+                  <span>Projects</span>
+                </button>
+
+                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
+                  <FileCode className="w-4 h-4 text-[#8c9bab]" />
+                  <span>Confluence</span>
+                </div>
+
+                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
+                  <Layers className="w-4 h-4 text-[#8c9bab]" />
+                  <span>Assets</span>
+                </div>
+
+                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
+                  <Users className="w-4 h-4 text-[#8c9bab]" />
+                  <span>Teams</span>
+                </div>
+
+                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
+                  <Target className="w-4 h-4 text-[#8c9bab]" />
+                  <span>Goals</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Customize Sidebar Footer */}
+          {!isSidebarCollapsed && (
+            <div className="p-2 border-t border-[#22272b] text-[#738496] hover:text-[#b6c2cf] flex items-center space-x-2 cursor-pointer transition-colors px-3 py-2">
+              <Sliders className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-medium">Customize sidebar</span>
+            </div>
+          )}
+        </aside>
+
+        {/* 3. MAIN WORK AREA (bg #1d2125 + dynamic ambient theme glow) */}
+        <main
+          className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125] transition-all duration-300 relative"
+          style={{
+            backgroundImage: currentTheme.gradient !== 'none' ? currentTheme.gradient : undefined,
+            backgroundColor: '#1d2125',
+          }}
+        >
+          {children}
+        </main>
+      </div>
     </div>
   );
 };
-

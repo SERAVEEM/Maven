@@ -3,9 +3,7 @@ import { CommandIntent } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
 import {
   Send,
-  Sparkles,
   CheckCircle2,
-  AlertTriangle,
   Bot,
   User,
   Zap,
@@ -25,7 +23,7 @@ export const ChatView: React.FC = () => {
     {
       id: 'msg-welcome',
       sender: 'assistant',
-      text: 'Halo! Saya MAVEN, asisten produktivitas pribadi Anda. Ketikkan instruksi bahasa alami seperti "buat tugas review proposal besok urgent" atau "ingatkan telepon klien besok".',
+      text: 'Halo! Saya MAVEN Assistant. Anda dapat mengetik instruksi bahasa alami seperti "buat tugas GPL-66 Security Review besok urgent" atau "ingatkan sprint review lusa".',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -52,7 +50,6 @@ export const ChatView: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      // Interpret command (Deterministic first, then AI fallback)
       const intent = await ipc.interpretCommand(userText);
 
       if (intent.intent === 'clarification_needed') {
@@ -71,9 +68,9 @@ export const ChatView: React.FC = () => {
           {
             id: `asst-${Date.now()}`,
             sender: 'assistant',
-            text: `Saya memahami instruksi Anda sebagai **${intent.intent}** (${
+            text: `Instruksi dipetakan ke **${intent.intent}** (${
               intent.is_deterministic ? 'Deterministic Regex (<2ms)' : 'AI Model'
-            }). Harap periksa parameter terstruktur di bawah:`,
+            }). Parameter terstruktur:`,
             intent,
             executed: false,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -94,7 +91,7 @@ export const ChatView: React.FC = () => {
             ? {
                 ...m,
                 executed: true,
-                text: `${m.text}\n\n✅ Tindakan berhasil dieksekusi dan disimpan ke database lokal SQLite.`,
+                text: `${m.text}\n\n✅ Berhasil dieksekusi dan disimpan ke database lokal SQLite.`,
               }
             : m
         )
@@ -103,86 +100,86 @@ export const ChatView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-4xl mx-auto w-full">
-      <div className="pb-4 border-b border-slate-800 flex items-center justify-between">
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-4xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
+      <div className="pb-4 border-b border-[#282e33] flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            AI Command Assistant
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-400" /> Safe Execution Layer
+          <h2 className="text-xl font-bold tracking-tight text-[#c7d1db] flex items-center gap-2">
+            AI Assistant
+            <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-[2px] bg-[#579dff]/15 text-[#579dff] border border-[#579dff]/30 flex items-center gap-1">
+              <Zap className="w-3 h-3 text-[#ffab00]" /> Safe Execution Layer
             </span>
           </h2>
-          <p className="text-sm text-slate-400">
-            Perintah bahasa alami dipetakan ke intent terstruktur sebelum disimpan ke SQLite
+          <p className="text-xs text-[#8c9bab] mt-0.5">
+            Natural language command dispatcher for Perspective x GPL
           </p>
         </div>
       </div>
 
       {/* Messages Feed */}
-      <div className="flex-1 overflow-y-auto space-y-4 my-4 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-3.5 my-4 pr-1">
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
           return (
             <div
               key={msg.id}
-              className={`flex items-start space-x-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}
+              className={`flex items-start space-x-2.5 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}
             >
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
                   isUser
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-indigo-400 border border-slate-700'
+                    ? 'bg-[#de350b] text-white'
+                    : 'bg-[#22272b] text-[#579dff] border border-[#282e33]'
                 }`}
               >
-                {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
 
               <div
-                className={`max-w-[75%] rounded-2xl p-4 text-sm leading-relaxed ${
+                className={`max-w-[75%] rounded-[4px] p-3 text-xs leading-relaxed ${
                   isUser
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-sm'
+                    ? 'bg-[#579dff] text-[#1d2125] font-medium shadow-sm'
+                    : 'bg-[#161a1d] border border-[#282e33] text-[#c7d1db]'
                 }`}
               >
                 <div className="whitespace-pre-wrap">{msg.text}</div>
 
                 {/* Intent Confirmation Card */}
                 {msg.intent && !msg.executed && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-2">
-                    <div className="flex items-center justify-between font-semibold text-slate-300">
-                      <span className="flex items-center gap-1.5 text-indigo-400">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Parameter Terstruktur
+                  <div className="mt-2.5 p-2.5 rounded-[3px] bg-[#22272b] border border-[#282e33] text-xs space-y-2">
+                    <div className="flex items-center justify-between font-semibold text-[#c7d1db]">
+                      <span className="flex items-center gap-1.5 text-[#579dff]">
+                        <Zap className="w-3 h-3" />
+                        Parameters
                       </span>
-                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-[#161a1d] text-[#8c9bab]">
                         Confidence: {(msg.intent.confidence * 100).toFixed(0)}%
                       </span>
                     </div>
 
-                    <div className="space-y-1 font-mono text-[11px] text-slate-400 bg-slate-900/60 p-2 rounded-lg">
+                    <div className="space-y-0.5 font-mono text-[10px] text-[#8c9bab] bg-[#161a1d] p-2 rounded-[2px]">
                       {Object.entries(msg.intent.parameters).map(([k, v]) => (
                         <div key={k} className="flex justify-between">
-                          <span className="text-slate-500">{k}:</span>
-                          <span className="text-slate-200">{String(v)}</span>
+                          <span className="text-[#738496]">{k}:</span>
+                          <span className="text-[#c7d1db]">{String(v)}</span>
                         </div>
                       ))}
                     </div>
 
-                    <div className="pt-2 flex justify-end">
+                    <div className="pt-1.5 flex justify-end">
                       <button
                         onClick={() => handleConfirmAction(msg.id, msg.intent!)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow"
+                        className="bg-[#216e4e] hover:bg-[#2abb7f] text-white px-3 py-1 rounded-[3px] text-xs font-semibold flex items-center gap-1 transition-colors"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Konfirmasi & Simpan
+                        Confirm & Save
                       </button>
                     </div>
                   </div>
                 )}
 
                 <span
-                  className={`text-[10px] block mt-1.5 ${
-                    isUser ? 'text-indigo-200 text-right' : 'text-slate-500'
+                  className={`text-[9px] block mt-1 ${
+                    isUser ? 'text-[#1d2125]/80 text-right' : 'text-[#738496]'
                   }`}
                 >
                   {msg.time}
@@ -193,9 +190,9 @@ export const ChatView: React.FC = () => {
         })}
 
         {isProcessing && (
-          <div className="flex items-center space-x-2 text-xs text-slate-500 italic">
-            <Bot className="w-4 h-4 animate-spin text-indigo-400" />
-            <span>Memetakan bahasa alami ke intent terstruktur...</span>
+          <div className="flex items-center space-x-2 text-xs text-[#738496] italic">
+            <Bot className="w-3.5 h-3.5 animate-spin text-[#579dff]" />
+            <span>Parsing command...</span>
           </div>
         )}
       </div>
@@ -206,19 +203,18 @@ export const ChatView: React.FC = () => {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Ketik instruksi produktivitas... (cth: 'buat tugas analisa log besok urgent')"
-          className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-5 pr-28 py-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-lg"
+          placeholder="Type natural language command... (e.g. 'buat tugas GPL-66 Testing besok urgent')"
+          className="w-full bg-[#161a1d] border border-[#282e33] rounded-[3px] pl-3.5 pr-20 py-2.5 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
         />
         <button
           type="submit"
           disabled={!inputText.trim() || isProcessing}
-          className="absolute right-2 top-2 bottom-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-4 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow"
+          className="absolute right-1.5 top-1.5 bottom-1.5 bg-[#579dff] hover:bg-[#85b8ff] disabled:opacity-40 text-[#1d2125] px-3 rounded-[3px] text-xs font-semibold flex items-center gap-1 transition-colors"
         >
-          <span>Kirim</span>
-          <Send className="w-3.5 h-3.5" />
+          <span>Send</span>
+          <Send className="w-3 h-3" />
         </button>
       </form>
     </div>
   );
 };
-

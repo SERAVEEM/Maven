@@ -44,17 +44,17 @@ export const NotesView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-6xl mx-auto w-full">
-      <div className="pb-4 border-b border-slate-800 flex items-center justify-between">
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-6xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
+      <div className="pb-4 border-b border-[#282e33] flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            Notes & Knowledge
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-              <Database className="w-3 h-3" /> FTS5 Enabled
+          <h2 className="text-xl font-bold tracking-tight text-[#c7d1db] flex items-center gap-2">
+            Docs & Knowledge
+            <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-[2px] bg-[#216e4e]/20 text-[#4bce97] border border-[#216e4e]/40 flex items-center gap-1">
+              <Database className="w-3 h-3" /> FTS5 Local
             </span>
           </h2>
-          <p className="text-sm text-slate-400">
-            Penyimpanan catatan pribadi berbasis Markdown dengan pencarian teks penuh lokal
+          <p className="text-xs text-[#8c9bab] mt-0.5">
+            Full-text searchable documentation and technical architecture specs
           </p>
         </div>
 
@@ -64,34 +64,34 @@ export const NotesView: React.FC = () => {
             setTitle('');
             setContent('');
           }}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow"
+          className="bg-[#579dff] hover:bg-[#85b8ff] text-[#1d2125] px-3.5 py-1.5 rounded-[3px] text-xs font-semibold flex items-center gap-1 transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          Catatan Baru
+          <Plus className="w-3.5 h-3.5" />
+          <span>New Document</span>
         </button>
       </div>
 
       {/* Main split view: Sidebar list + Detail Editor */}
-      <div className="flex-1 flex gap-5 mt-5 overflow-hidden">
+      <div className="flex-1 flex gap-4 mt-4 overflow-hidden">
         {/* Left: Notes List & Search */}
-        <div className="w-80 flex flex-col border-r border-slate-800 pr-4 overflow-hidden">
+        <div className="w-72 flex flex-col border-r border-[#282e33] pr-3 overflow-hidden">
           {/* Search Box */}
-          <div className="relative mb-3">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+          <div className="relative mb-2.5">
+            <Search className="w-3.5 h-3.5 text-[#738496] absolute left-2.5 top-2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari catatan (FTS5 token)..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Search docs (FTS5)..."
+              className="w-full bg-[#22272b] border border-[#282e33] rounded-[3px] pl-8 pr-3 py-1 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
             />
           </div>
 
           {/* List */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
             {notes.length === 0 ? (
-              <div className="text-center py-10 text-xs text-slate-500">
-                {searchQuery ? 'Tidak ada hasil FTS5 yang cocok.' : 'Belum ada catatan tersimpan.'}
+              <div className="text-center py-10 text-xs text-[#738496]">
+                {searchQuery ? 'No FTS5 results.' : 'No docs created yet.'}
               </div>
             ) : (
               notes.map((n) => {
@@ -103,21 +103,21 @@ export const NotesView: React.FC = () => {
                       setSelectedNote(n);
                       setIsCreating(false);
                     }}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                    className={`w-full text-left p-2.5 rounded-[3px] border transition-colors ${
                       isSelected
-                        ? 'bg-indigo-600/15 border-indigo-500/50 shadow-sm'
-                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                        ? 'bg-[#22272b] border-[#579dff] text-[#579dff]'
+                        : 'bg-[#161a1d] border-[#282e33] hover:border-[#3b444c]'
                     }`}
                   >
                     <h4
-                      className={`text-sm font-semibold truncate ${
-                        isSelected ? 'text-indigo-300' : 'text-slate-200'
+                      className={`text-xs font-semibold truncate ${
+                        isSelected ? 'text-[#579dff]' : 'text-[#c7d1db]'
                       }`}
                     >
                       {n.title}
                     </h4>
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-1">{n.content}</p>
-                    <span className="text-[10px] text-slate-500 block mt-2">
+                    <p className="text-[11px] text-[#8c9bab] line-clamp-2 mt-0.5">{n.content}</p>
+                    <span className="text-[9px] text-[#738496] block mt-1.5">
                       {new Date(n.updated_at).toLocaleDateString()}
                     </span>
                   </button>
@@ -128,62 +128,62 @@ export const NotesView: React.FC = () => {
         </div>
 
         {/* Right: Note Detail / Create View */}
-        <div className="flex-1 flex flex-col bg-slate-900/40 border border-slate-800 rounded-2xl p-5 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-[#161a1d] border border-[#282e33] rounded-[4px] p-4 overflow-hidden">
           {isCreating ? (
-            <div className="flex-1 flex flex-col space-y-3">
+            <div className="flex-1 flex flex-col space-y-2.5">
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Judul Catatan..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-bold text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Document title..."
+                className="w-full bg-[#22272b] border border-[#282e33] rounded-[3px] px-3 py-2 text-sm font-semibold text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
               />
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Tulis konten catatan (Markdown didukung)..."
-                className="flex-1 w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
+                placeholder="Write doc content (Markdown supported)..."
+                className="flex-1 w-full bg-[#22272b] border border-[#282e33] rounded-[3px] p-3 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff] resize-none font-mono"
               />
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#282e33]">
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200"
+                  className="px-3 py-1.5 text-xs text-[#8c9bab] hover:text-[#c7d1db]"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   onClick={handleSaveNote}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow"
+                  className="bg-[#579dff] hover:bg-[#85b8ff] text-[#1d2125] px-4 py-1.5 rounded-[3px] text-xs font-semibold shadow-sm"
                 >
-                  Simpan Catatan
+                  Save Document
                 </button>
               </div>
             </div>
           ) : selectedNote ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+              <div className="flex items-center justify-between pb-2.5 border-b border-[#282e33] mb-3">
                 <div>
-                  <h3 className="text-xl font-bold text-white">{selectedNote.title}</h3>
-                  <span className="text-xs text-slate-500">
-                    Terakhir diubah: {new Date(selectedNote.updated_at).toLocaleString()}
+                  <h3 className="text-base font-bold text-[#c7d1db]">{selectedNote.title}</h3>
+                  <span className="text-[11px] text-[#738496]">
+                    Updated: {new Date(selectedNote.updated_at).toLocaleString()}
                   </span>
                 </div>
                 <button
                   onClick={() => handleSoftDelete(selectedNote.id)}
-                  className="text-xs text-rose-400 hover:text-rose-300 p-2 rounded-lg hover:bg-rose-500/10 transition-colors flex items-center gap-1 border border-rose-500/20"
+                  className="text-xs text-[#ff5630] hover:underline p-1.5 flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Hapus
+                  Delete
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto pr-2 text-sm text-slate-300 whitespace-pre-wrap leading-relaxed font-sans">
+              <div className="flex-1 overflow-y-auto pr-2 text-xs text-[#c7d1db] whitespace-pre-wrap leading-relaxed font-sans">
                 {selectedNote.content}
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-sm">
-              <FileText className="w-10 h-10 mb-2 opacity-40" />
-              Pilih catatan di sisi kiri atau buat catatan baru
+            <div className="flex-1 flex flex-col items-center justify-center text-[#738496] text-xs">
+              <FileText className="w-8 h-8 mb-2 opacity-40" />
+              Select a document or create a new one
             </div>
           )}
         </div>
@@ -191,4 +191,3 @@ export const NotesView: React.FC = () => {
     </div>
   );
 };
-

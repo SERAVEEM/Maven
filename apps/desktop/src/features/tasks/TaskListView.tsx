@@ -99,7 +99,7 @@ export const TaskListView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-[#1d2125] text-[#b6c2cf] font-sans">
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#282e33]">
         <div>

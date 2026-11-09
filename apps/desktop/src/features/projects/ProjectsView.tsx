@@ -36,7 +36,7 @@ export const ProjectsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-[#1d2125] text-[#b6c2cf] font-sans">
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
       <div className="pb-4 border-b border-[#282e33]">
         <h2 className="text-xl font-bold tracking-tight text-[#c7d1db]">Projects & Spaces</h2>
         <p className="text-xs text-[#8c9bab] mt-0.5">

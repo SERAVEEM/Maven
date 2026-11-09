@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CalendarRange,
   Kanban,
@@ -22,6 +22,10 @@ import {
   Sliders,
   PanelLeftClose,
   PanelLeftOpen,
+  Palette,
+  Check,
+  Sparkles,
+  X,
 } from 'lucide-react';
 
 export type NavTab =
@@ -33,6 +37,67 @@ export type NavTab =
   | 'docs'
   | 'chat'
   | 'projects';
+
+export interface JiraTheme {
+  id: string;
+  name: string;
+  subtitle: string;
+  gradient: string;
+  accent: string;
+  previewBg: string;
+}
+
+// ponytail: ambient cover glow wallpapers matching Jira spaces
+export const JIRA_THEMES: JiraTheme[] = [
+  {
+    id: 'nebula',
+    name: 'Cosmic Nebula',
+    subtitle: 'Warm reddish glow (Default)',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(195, 45, 30, 0.22), transparent 72%)',
+    accent: '#de350b',
+    previewBg: '#4a1d1d',
+  },
+  {
+    id: 'charcoal',
+    name: 'Jira Charcoal',
+    subtitle: 'Classic clean dark canvas',
+    gradient: 'none',
+    accent: '#8c9bab',
+    previewBg: '#22272b',
+  },
+  {
+    id: 'ocean',
+    name: 'Deep Pacific',
+    subtitle: 'Electric midnight blue aura',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(59, 130, 246, 0.20), transparent 72%)',
+    accent: '#579dff',
+    previewBg: '#1c2e4a',
+  },
+  {
+    id: 'aurora',
+    name: 'Boreal Aurora',
+    subtitle: 'Nordic emerald ambient',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(16, 185, 129, 0.18), transparent 72%)',
+    accent: '#10b981',
+    previewBg: '#1b3b2f',
+  },
+  {
+    id: 'sunset',
+    name: 'Solar Amber',
+    subtitle: 'Warm dusk twilight glow',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(245, 158, 11, 0.18), transparent 72%)',
+    accent: '#f59e0b',
+    previewBg: '#45311b',
+  },
+  {
+    id: 'amethyst',
+    name: 'Starlight Violet',
+    subtitle: 'Cosmic purple mystery',
+    gradient: 'radial-gradient(ellipse 75% 45% at 38% -6%, rgba(147, 51, 234, 0.20), transparent 72%)',
+    accent: '#a855f7',
+    previewBg: '#361e47',
+  },
+];
 
 interface AppLayoutProps {
   currentTab: NavTab;
@@ -49,6 +114,32 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isPlanningOpen, setIsPlanningOpen] = useState(true);
+
+  // ponytail: theme persistence in localStorage
+  const [bgTheme, setBgTheme] = useState<string>(() => {
+    return localStorage.getItem('maven_jira_bg_theme') || 'nebula';
+  });
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const themePopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themePopoverRef.current && !themePopoverRef.current.contains(e.target as Node)) {
+        setIsThemeOpen(false);
+      }
+    };
+    if (isThemeOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isThemeOpen]);
+
+  const handleSelectTheme = (themeId: string) => {
+    setBgTheme(themeId);
+    localStorage.setItem('maven_jira_bg_theme', themeId);
+  };
+
+  const currentTheme = JIRA_THEMES.find((t) => t.id === bgTheme) || JIRA_THEMES[0]!;
 
   const navItems = [
     { id: 'timeline' as NavTab, label: 'Timeline', icon: CalendarRange, badge: null },
@@ -160,6 +251,75 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               9+
             </span>
           </button>
+
+          {/* Workspace Background Wallpaper / Glow Switcher */}
+          <div className="relative" ref={themePopoverRef}>
+            <button
+              onClick={() => setIsThemeOpen((prev) => !prev)}
+              className={`p-1.5 rounded-[3px] transition-colors flex items-center gap-1.5 ${
+                isThemeOpen
+                  ? 'bg-[#22272b] text-[#579dff]'
+                  : 'hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf]'
+              }`}
+              title="Workspace Wallpaper Glow"
+            >
+              <Palette className="w-4 h-4" />
+              <span
+                className="w-2 h-2 rounded-full ring-1 ring-[#161a1d] shadow-sm"
+                style={{ backgroundColor: currentTheme.accent }}
+              />
+            </button>
+
+            {/* Jira Theme Popover Dropdown */}
+            {isThemeOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#22272b] border border-[#282e33] rounded-[4px] shadow-2xl z-50 overflow-hidden">
+                <div className="p-2.5 border-b border-[#282e33] flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[#c7d1db] font-semibold text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-[#579dff]" />
+                    <span>Workspace Wallpaper</span>
+                  </div>
+                  <button
+                    onClick={() => setIsThemeOpen(false)}
+                    className="text-[#738496] hover:text-[#b6c2cf] p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto">
+                  {JIRA_THEMES.map((theme) => {
+                    const isSelected = theme.id === bgTheme;
+                    return (
+                      <button
+                        key={theme.id}
+                        onClick={() => {
+                          handleSelectTheme(theme.id);
+                          setIsThemeOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-[3px] text-left transition-colors ${
+                          isSelected
+                            ? 'bg-[#282e33] border border-[#579dff]/40 text-[#c7d1db]'
+                            : 'hover:bg-[#1d2125] text-[#8c9bab] hover:text-[#c7d1db] border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-4 h-4 rounded-full border border-[#282e33] flex-shrink-0 shadow-sm"
+                            style={{ backgroundColor: theme.accent }}
+                          />
+                          <div>
+                            <div className="text-xs font-medium leading-tight">{theme.name}</div>
+                            <div className="text-[10px] text-[#738496] mt-0.5">{theme.subtitle}</div>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#579dff] flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Settings cog */}
           <button
@@ -342,8 +502,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           )}
         </aside>
 
-        {/* 3. MAIN WORK AREA (bg #1d2125) */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125]">
+        {/* 3. MAIN WORK AREA (bg #1d2125 + dynamic ambient theme glow) */}
+        <main
+          className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125] transition-all duration-300 relative"
+          style={{
+            backgroundImage: currentTheme.gradient !== 'none' ? currentTheme.gradient : undefined,
+            backgroundColor: '#1d2125',
+          }}
+        >
           {children}
         </main>
       </div>

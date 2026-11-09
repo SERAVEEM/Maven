@@ -100,7 +100,7 @@ export const ChatView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-4xl mx-auto w-full bg-[#1d2125] text-[#b6c2cf] font-sans">
+    <div className="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-4xl mx-auto w-full bg-transparent text-[#b6c2cf] font-sans">
       <div className="pb-4 border-b border-[#282e33] flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-[#c7d1db] flex items-center gap-2">

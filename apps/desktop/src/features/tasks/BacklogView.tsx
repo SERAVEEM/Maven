@@ -37,7 +37,7 @@ export const BacklogView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125] text-[#b6c2cf] font-sans select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent text-[#b6c2cf] font-sans select-none">
       {/* Backlog Header */}
       <div className="px-6 py-3 border-b border-[#282e33] flex items-center justify-between flex-shrink-0">
         <div>

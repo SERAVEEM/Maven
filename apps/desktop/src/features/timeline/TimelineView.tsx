@@ -180,7 +180,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     zoomLevel === 'weeks' ? 'min-w-[2100px]' : zoomLevel === 'quarters' ? 'min-w-[950px]' : 'min-w-[1300px]';
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1d2125] text-[#b6c2cf] select-none overflow-hidden font-sans">
+    <div className="flex flex-col h-full w-full bg-transparent text-[#b6c2cf] select-none overflow-hidden font-sans">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-12 right-8 z-50 bg-[#22272b] border border-[#282e33] text-[#c7d1db] px-3.5 py-2 rounded-[3px] shadow-2xl text-xs font-medium flex items-center gap-2">
@@ -190,7 +190,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       )}
 
       {/* 1. BREADCRUMB HEADER: Spaces > Perspective x GPL + Team Avatars */}
-      <div className="px-6 pt-3 pb-2 flex items-center justify-between flex-shrink-0 bg-[#1d2125]">
+      <div className="px-6 pt-3 pb-2 flex items-center justify-between flex-shrink-0 bg-transparent">
         <div className="flex items-center space-x-2 text-xs">
           <span className="text-[#8c9bab] hover:text-[#c7d1db] cursor-pointer">Spaces</span>
           <span className="text-[#738496]">&gt;</span>
@@ -242,7 +242,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       </div>
 
       {/* 2. SUB-TAB BAR: Summary, List, Board, Calendar, Timeline (Active), Docs, Forms, Reports, Backlog, + */}
-      <div className="px-6 border-b border-[#282e33] flex items-center space-x-6 text-xs flex-shrink-0 bg-[#1d2125]">
+      <div className="px-6 border-b border-[#282e33] flex items-center space-x-6 text-xs flex-shrink-0 bg-transparent">
         {[
           { id: 'summary', label: 'Summary' },
           { id: 'list', label: 'List' },
@@ -288,7 +288,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       </div>
 
       {/* 3. FILTER TOOLBAR: Search timeline input, avatar circle filters, dropdown buttons */}
-      <div className="px-6 py-2 border-b border-[#282e33] flex items-center justify-between flex-wrap gap-2.5 flex-shrink-0 bg-[#1d2125]">
+      <div className="px-6 py-2 border-b border-[#282e33] flex items-center justify-between flex-wrap gap-2.5 flex-shrink-0 bg-transparent">
         <div className="flex items-center space-x-2.5 flex-wrap gap-2">
           {/* Search Timeline Input */}
           <div className="relative">

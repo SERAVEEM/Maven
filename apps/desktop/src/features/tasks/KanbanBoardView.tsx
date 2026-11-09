@@ -132,7 +132,7 @@ export const KanbanBoardView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#1d2125] text-[#b6c2cf] font-sans select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent text-[#b6c2cf] font-sans select-none">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-12 right-8 z-50 bg-[#22272b] border border-[#282e33] text-[#c7d1db] px-3.5 py-2 rounded-[3px] shadow-2xl text-xs font-medium">

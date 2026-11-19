@@ -75,6 +75,16 @@ export interface SearchNotesDto {
   limit?: number;
 }
 
+// Tag Commands
+export interface CreateTagDto {
+  name: string;
+}
+
+export interface SetNoteTagsDto {
+  note_id: string;
+  tag_ids: string[];
+}
+
 // Calendar Commands
 export interface CreateCalendarEventDto {
   title: string;

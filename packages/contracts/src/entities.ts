@@ -90,6 +90,7 @@ export interface Note {
   created_at: string; // ISO-8601 UTC
   updated_at: string; // ISO-8601 UTC
   deleted_at: string | null; // ISO-8601 UTC (soft delete)
+  tags?: Tag[];
 }
 
 export interface Tag {

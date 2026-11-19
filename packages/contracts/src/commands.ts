@@ -3,7 +3,7 @@
  * Used across Presentation Layer and Host Backend (Tauri IPC)
  */
 
-import { Subtask, TaskComment, TaskPriority, TaskStatus } from './entities.js';
+import { Subtask, TaskComment, TaskPriority, TaskStatus, ProjectStatus } from './entities.js';
 
 // Task Commands
 export interface CreateTaskDto {
@@ -56,6 +56,19 @@ export interface CreateProjectDto {
   color?: string;
 }
 
+export interface UpdateProjectDto {
+  id: string;
+  name?: string;
+  description?: string | null;
+  status?: ProjectStatus;
+  color?: string | null;
+}
+
+export interface DeleteProjectResult {
+  deleted: boolean;
+  unlinked_tasks: number;
+}
+
 // Note Commands
 export interface CreateNoteDto {
   title: string;
@@ -75,6 +88,16 @@ export interface SearchNotesDto {
   limit?: number;
 }
 
+// Tag Commands
+export interface CreateTagDto {
+  name: string;
+}
+
+export interface SetNoteTagsDto {
+  note_id: string;
+  tag_ids: string[];
+}
+
 // Calendar Commands
 export interface CreateCalendarEventDto {
   title: string;
@@ -85,6 +108,18 @@ export interface CreateCalendarEventDto {
   timezone: string;
   all_day?: boolean;
   recurrence_rule?: string;
+}
+
+export interface UpdateCalendarEventDto {
+  id: string;
+  title?: string;
+  description?: string | null;
+  location?: string | null;
+  starts_at?: string;
+  ends_at?: string | null;
+  timezone?: string;
+  all_day?: boolean;
+  recurrence_rule?: string | null;
 }
 
 // Natural Language Intent Interpretation

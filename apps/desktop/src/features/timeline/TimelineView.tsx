@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Task, TaskStatus } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
 import { TaskDetailDrawer } from '../tasks/TaskDetailDrawer';
+import { getMemberInitials, getMemberColor } from '../../lib/ui-helpers';
 import {
   Search,
   Plus,
@@ -20,28 +21,23 @@ import { NavTab } from '../../components/layout/AppLayout';
 interface TimelineViewProps {
   onTabChange?: (tab: NavTab) => void;
   onOpenCreate?: () => void;
+  activeProjectId?: string | null;
+  activeProjectName?: string;
 }
 
 type ZoomLevel = 'weeks' | 'months' | 'quarters';
 
-// 5-Month span: October 1, 2026 to February 28, 2027 (151 days total)
-const TIMELINE_START = new Date('2026-10-01T00:00:00Z').getTime();
-const TIMELINE_END = new Date('2027-02-28T23:59:59Z').getTime();
-// "Today" is set to mid-November 2026 (Nov 18, 2026) matching the reference screenshot
-const TODAY_TIME = new Date('2026-11-18T12:00:00Z').getTime();
-
-// Team assignees for Jira filter circles and avatars
-const TEAM_MEMBERS = [
-  { id: 'FN', name: 'Fawwaz Naufal', color: '#de350b' },
-  { id: 'RD', name: 'Rangga Dwi', color: '#6e5dc6' },
-  { id: 'AB', name: 'Aditya Bagus', color: '#0052cc' },
-  { id: 'LA', name: 'Lia Anggraini', color: '#216e4e' },
-  { id: 'AS', name: 'Arif Setiawan', color: '#008da6' },
-];
+// Dynamic 5-month window anchored around today (1 month back to 4 months forward)
+const now = new Date();
+const TIMELINE_START = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+const TIMELINE_END = new Date(now.getFullYear(), now.getMonth() + 4, 0, 23, 59, 59, 999).getTime();
+const TODAY_TIME = Date.now();
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
   onTabChange,
   onOpenCreate,
+  activeProjectId,
+  activeProjectName,
 }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<string>('timeline');
@@ -86,10 +82,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     }
   };
 
-  // Filter tasks based on search, epic, status, type, and assignee
+  // Filter tasks based on project, search, epic, status, type, and assignee
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      // Must be a GPL task or general task
+      if (activeProjectId && task.project_id !== activeProjectId) {
+        return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = task.title.toLowerCase().includes(q);
@@ -106,16 +105,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         return false;
       }
 
-      if (selectedAssignee) {
-        // Map task index/key to assignee for realistic filter demo
-        const num = parseInt(task.task_key.replace(/\D/g, '') || '0', 10);
-        const memberIdx = num % TEAM_MEMBERS.length;
-        if (TEAM_MEMBERS[memberIdx]?.id !== selectedAssignee) return false;
+      if (selectedAssignee && task.assignee !== selectedAssignee) {
+        return false;
       }
 
       return true;
     });
-  }, [tasks, searchQuery, selectedEpic, selectedStatus, selectedAssignee]);
+  }, [tasks, activeProjectId, searchQuery, selectedEpic, selectedStatus, selectedAssignee]);
 
   // Extract unique epics for filter dropdown
   const uniqueEpics = useMemo(() => {
@@ -125,6 +121,31 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     });
     return Array.from(epics);
   }, [tasks]);
+
+  // Dynamic 5-month columns
+  const monthColumns = useMemo(() => {
+    const totalSpan = TIMELINE_END - TIMELINE_START;
+    const currentYear = now.getFullYear();
+    return [-1, 0, 1, 2, 3].map((offset) => {
+      const mStart = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      const mEnd = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
+      const mSpan = mEnd.getTime() - mStart.getTime();
+      const widthPercent = (mSpan / totalSpan) * 100;
+      const isCurrent = offset === 0;
+      const monthName = mStart.toLocaleDateString('en-US', { month: 'long' });
+      const yearSuffix = mStart.getFullYear() !== currentYear ? ` '${String(mStart.getFullYear()).slice(-2)}` : '';
+      const label = `${monthName}${yearSuffix}`;
+      const shortName = mStart.toLocaleDateString('en-US', { month: 'short' });
+      const weeks = [1, 8, 15, 22].map((day) => `${shortName} ${day}`);
+
+      return { label, isCurrent, widthPercent, weeks };
+    });
+  }, []);
+
+  const todayLabel = useMemo(
+    () => new Date(TODAY_TIME).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+    []
+  );
 
   // Toggle task complete status
   const handleToggleTask = async (task: Task, e: React.MouseEvent) => {
@@ -166,13 +187,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     };
   };
 
-  // Assignee helper for each task
-  const getTaskAssignee = (task: Task) => {
-    const num = parseInt(task.task_key.replace(/\D/g, '') || '0', 10);
-    return TEAM_MEMBERS[num % TEAM_MEMBERS.length]!;
-  };
-
-  // Calculate today line position (mid-November 2026)
+  // Calculate today line position
   const todayPercent = Math.max(0, Math.min(100, ((TODAY_TIME - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100));
 
   // Determine grid container min-width according to zoom level
@@ -189,43 +204,21 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         </div>
       )}
 
-      {/* 1. BREADCRUMB HEADER: Spaces > Perspective x GPL + Team Avatars */}
+      {/* 1. BREADCRUMB HEADER: Spaces > Project Name */}
       <div className="px-6 pt-3 pb-2 flex items-center justify-between flex-shrink-0 bg-transparent">
         <div className="flex items-center space-x-2 text-xs">
           <span className="text-[#8c9bab] hover:text-[#c7d1db] cursor-pointer">Spaces</span>
           <span className="text-[#738496]">&gt;</span>
           <div className="flex items-center space-x-1.5 font-semibold text-[#c7d1db]">
-            <span className="w-4 h-4 rounded-[2px] bg-[#216e4e] flex items-center justify-center text-[10px] text-white font-bold">
-              P
+            <span className="w-4 h-4 rounded-[2px] bg-[#579dff] flex items-center justify-center text-[10px] text-white font-bold">
+              {(activeProjectName || 'Personal Workspace')[0]?.toUpperCase() || 'P'}
             </span>
-            <span>Perspective x GPL</span>
+            <span>{activeProjectName || 'Personal Workspace'}</span>
           </div>
         </div>
 
-        {/* Right side: Team avatars stack & Project action icons */}
+        {/* Right side: Project action icons */}
         <div className="flex items-center space-x-3">
-          {/* Team Avatars Stack: FN, RD, AB, LA, AS, +3 */}
-          <div className="flex items-center -space-x-1.5">
-            {TEAM_MEMBERS.map((m) => (
-              <div
-                key={m.id}
-                style={{ backgroundColor: m.color }}
-                className="w-6 h-6 rounded-full border-2 border-[#1d2125] flex items-center justify-center text-[9px] font-bold text-white shadow-sm cursor-pointer hover:scale-110 hover:z-20 transition-transform"
-                title={`${m.name} (${m.id})`}
-              >
-                {m.id}
-              </div>
-            ))}
-            <div
-              className="w-6 h-6 rounded-full bg-[#282e33] border-2 border-[#1d2125] flex items-center justify-center text-[9px] font-bold text-[#8c9bab] cursor-pointer hover:scale-110 hover:z-20 transition-transform"
-              title="+3 other contributors"
-            >
-              +3
-            </div>
-          </div>
-
-          <div className="h-4 w-[1px] bg-[#282e33]" />
-
           <button
             className="p-1 rounded-[3px] text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b] transition-colors"
             title="Share timeline"
@@ -309,28 +302,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               </button>
             )}
           </div>
-
-          {/* Quick Assignee Circle Filter Buttons (FN, RD, AB, LA, AS) */}
-          <div className="flex items-center space-x-1">
-            {TEAM_MEMBERS.map((m) => {
-              const isSelected = selectedAssignee === m.id;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setSelectedAssignee(isSelected ? null : m.id)}
-                  style={{ backgroundColor: m.color }}
-                  className={`w-6 h-6 rounded-full text-[9px] font-bold text-white flex items-center justify-center transition-all ${
-                    isSelected ? 'ring-2 ring-white scale-110 z-10' : 'opacity-80 hover:opacity-100'
-                  }`}
-                  title={`Filter by ${m.name}`}
-                >
-                  {m.id}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="h-4 w-[1px] bg-[#282e33]" />
 
           {/* Epic Dropdown Filter */}
           <div className="relative">
@@ -421,23 +392,22 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
           {/* Scrollable Work items list */}
           <div className="flex-1 overflow-y-auto">
-            {/* Sprint accordion header: v Sprints > Sprint 1 */}
+            {/* Tasks accordion header: v Tasks > Workspace */}
             <div
               onClick={() => setIsSprintExpanded(!isSprintExpanded)}
               className="h-9 px-3 bg-[#22272b]/70 hover:bg-[#22272b] flex items-center justify-between cursor-pointer border-b border-[#282e33] transition-colors"
             >
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center space-x-1.5 min-w-0 pr-2">
                 {isSprintExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-[#8c9bab]" />
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8c9bab] flex-shrink-0" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-[#8c9bab]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8c9bab] flex-shrink-0" />
                 )}
-                <span className="text-xs font-semibold text-[#c7d1db]">Sprints</span>
-                <span className="text-[#738496]">&gt;</span>
-                <span className="text-xs font-semibold text-[#579dff]">Sprint 1</span>
+                <span className="text-xs font-semibold text-[#c7d1db] flex-shrink-0">Tasks</span>
+                <span className="text-[#738496] flex-shrink-0">&gt;</span>
+                <span className="text-xs font-semibold text-[#579dff] truncate">{activeProjectName || 'Personal Workspace'}</span>
               </div>
-              <div className="flex items-center space-x-2 text-[10px] text-[#738496]">
-                <span>1 Nov - 28 Feb</span>
+              <div className="flex items-center space-x-2 text-[10px] text-[#738496] flex-shrink-0">
                 <span className="px-1.5 py-0.2 rounded bg-[#181b1f] text-[#8c9bab] font-semibold border border-[#282e33]">
                   {filteredTasks.length} issues
                 </span>
@@ -545,67 +515,30 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           <div className={`flex flex-col h-full ${gridMinWidth} relative`}>
             {/* MONTH HEADER COLUMNS (Sticky top, height 36px) */}
             <div className="h-9 border-b border-[#282e33] bg-[#181b1f] flex items-stretch text-xs font-semibold text-[#8c9bab] flex-shrink-0 sticky top-0 z-30">
-              {/* October 2026 (20.53%) */}
-              <div className="w-[20.53%] border-r border-[#282e33] px-3 py-1 flex flex-col justify-center">
-                <span className="text-[#c7d1db] text-xs">October</span>
-                <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
-                  <span>Oct 4</span>
-                  <span>Oct 11</span>
-                  <span>Oct 18</span>
-                  <span>Oct 25</span>
+              {monthColumns.map((col, idx) => (
+                <div
+                  key={col.label}
+                  style={{ width: `${col.widthPercent}%` }}
+                  className={`px-3 py-1 flex flex-col justify-center ${
+                    idx < monthColumns.length - 1 ? 'border-r border-[#282e33]' : ''
+                  } ${col.isCurrent ? 'bg-[#22272b]/40' : ''}`}
+                >
+                  <div className={`flex items-center justify-between ${col.isCurrent ? 'text-[#579dff]' : ''}`}>
+                    <span className="flex items-center gap-1 font-semibold text-xs text-[#c7d1db]">
+                      {col.isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-[#579dff]" />}
+                      {col.label}
+                    </span>
+                    {col.isCurrent && (
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-[#579dff]">Current</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
+                    {col.weeks.map((w) => (
+                      <span key={w}>{w}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* November 2026 (Current Month - 19.87%) */}
-              <div className="w-[19.87%] border-r border-[#282e33] px-3 py-1 flex flex-col justify-center bg-[#22272b]/40">
-                <div className="flex items-center justify-between text-[#579dff]">
-                  <span className="flex items-center gap-1 font-semibold text-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#579dff]" />
-                    November
-                  </span>
-                  <span className="text-[9px] uppercase font-bold tracking-wider">Current</span>
-                </div>
-                <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
-                  <span>Nov 1</span>
-                  <span>Nov 8</span>
-                  <span>Nov 15</span>
-                  <span>Nov 22</span>
-                  <span>Nov 29</span>
-                </div>
-              </div>
-
-              {/* December 2026 (20.53%) */}
-              <div className="w-[20.53%] border-r border-[#282e33] px-3 py-1 flex flex-col justify-center">
-                <span className="text-[#c7d1db] text-xs">December</span>
-                <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
-                  <span>Dec 6</span>
-                  <span>Dec 13</span>
-                  <span>Dec 20</span>
-                  <span>Dec 27</span>
-                </div>
-              </div>
-
-              {/* January '27 (20.53%) */}
-              <div className="w-[20.53%] border-r border-[#282e33] px-3 py-1 flex flex-col justify-center">
-                <span className="text-[#c7d1db] text-xs">January '27</span>
-                <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
-                  <span>Jan 3</span>
-                  <span>Jan 10</span>
-                  <span>Jan 17</span>
-                  <span>Jan 24</span>
-                </div>
-              </div>
-
-              {/* February '27 (18.54%) */}
-              <div className="w-[18.54%] px-3 py-1 flex flex-col justify-center">
-                <span className="text-[#c7d1db] text-xs">February '27</span>
-                <div className="flex justify-between text-[9px] text-[#738496] font-mono mt-0.5">
-                  <span>Feb 1</span>
-                  <span>Feb 8</span>
-                  <span>Feb 15</span>
-                  <span>Feb 22</span>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* VERTICAL "TODAY" LINE (Mid-November 2026, ~32.12%) */}
@@ -614,79 +547,90 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               style={{ left: `${todayPercent}%` }}
             >
               <div className="sticky top-0 bg-[#579dff] text-[#1d2125] font-bold text-[9px] px-1.5 py-0.5 rounded-[2px] shadow-md whitespace-nowrap z-30">
-                Today (18 Nov)
+                Today ({todayLabel})
               </div>
               <div className="w-[1.5px] flex-1 bg-[#579dff] shadow-[0_0_6px_rgba(87,157,255,0.6)]" />
             </div>
 
             {/* VERTICAL COLUMN GRID LINES */}
             <div className="absolute inset-0 top-9 pointer-events-none flex z-0">
-              <div className="w-[20.53%] border-r border-[#22272b]" />
-              <div className="w-[19.87%] border-r border-[#22272b]" />
-              <div className="w-[20.53%] border-r border-[#22272b]" />
-              <div className="w-[20.53%] border-r border-[#22272b]" />
-              <div className="w-[18.54%]" />
+              {monthColumns.map((col, idx) => (
+                <div
+                  key={idx}
+                  style={{ width: `${col.widthPercent}%` }}
+                  className={idx < monthColumns.length - 1 ? 'border-r border-[#282e33]' : ''}
+                />
+              ))}
             </div>
 
-            {/* SPRINT BRACKET ROW (Nov 1 - Feb 28, spans from 20.53% to end) */}
+            {/* TIMELINE RANGE BAR */}
             <div className="h-9 border-b border-[#282e33] bg-[#181b1f]/30 flex items-center relative z-10 flex-shrink-0">
               <div
                 className="absolute h-6 rounded-[3px] bg-[#22272b] border border-[#282e33] flex items-center px-2.5 text-[10px] font-semibold text-[#8c9bab] shadow-sm"
-                style={{ left: '20.53%', width: '78.5%' }}
+                style={{ left: `${monthColumns[0]?.widthPercent || 20}%`, width: '75%' }}
               >
-                Sprint 1 Window (1 Nov 2026 - 28 Feb 2027)
+                {activeProjectName || 'Personal Workspace'} Active Span
               </div>
             </div>
 
             {/* GANTT DURATION BARS ROW BY ROW */}
             {isSprintExpanded && (
               <div className="flex flex-col relative z-10">
-                {filteredTasks.map((task) => {
-                  const barStyle = getGanttBarStyle(task);
-                  const barColor = task.color || '#388bff';
-                  const assignee = getTaskAssignee(task);
-                  const isDone = task.status === 'done';
+                {filteredTasks.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#738496] italic">
+                    No matching timeline bars found.
+                  </div>
+                ) : (
+                  filteredTasks.map((task) => {
+                    const barStyle = getGanttBarStyle(task);
+                    const barColor = task.color || '#388bff';
+                    const isDone = task.status === 'done';
+                    const initials = task.assignee ? getMemberInitials(task.assignee) : null;
+                    const avatarColor = initials ? getMemberColor(initials) : '#579dff';
 
-                  return (
-                    <div
-                      key={task.id}
-                      className="h-[38px] border-b border-[#22272b]/60 flex items-center relative hover:bg-white/[0.02] transition-colors"
-                    >
-                      {/* Exact flat rectangular duration bar: rounded-[3px], height 22px, NO pill shape! */}
+                    return (
                       <div
-                        onClick={() => handleTaskClick(task)}
-                        style={{
-                          left: barStyle.left,
-                          width: barStyle.width,
-                          backgroundColor: barColor,
-                        }}
-                        className={`absolute h-[22px] rounded-[3px] shadow flex items-center justify-between px-2 text-xs font-semibold cursor-pointer transition-all duration-150 hover:brightness-110 hover:shadow-lg hover:z-20 ${
-                          isDone ? 'opacity-85' : ''
-                        }`}
-                        title={`${task.task_key}: ${task.title}`}
+                        key={task.id}
+                        className="h-[38px] border-b border-[#22272b]/60 flex items-center relative hover:bg-white/[0.02] transition-colors"
                       >
-                        {/* Task key & title */}
-                        <div className="flex items-center space-x-1.5 truncate pr-1">
-                          <span className="text-[10px] font-mono text-white font-bold drop-shadow-sm flex-shrink-0">
-                            {task.task_key}
-                          </span>
-                          <span className="text-[11px] text-white truncate drop-shadow-sm font-medium">
-                            {task.title}
-                          </span>
-                        </div>
-
-                        {/* Assignee Avatar Circle */}
+                        {/* Exact flat rectangular duration bar: rounded-[3px], height 22px, NO pill shape! */}
                         <div
-                          style={{ backgroundColor: assignee.color }}
-                          className="w-4 h-4 rounded-full text-[8px] font-bold text-white flex items-center justify-center border border-white/30 flex-shrink-0 ml-1 shadow-inner"
-                          title={assignee.name}
+                          onClick={() => handleTaskClick(task)}
+                          style={{
+                            left: barStyle.left,
+                            width: barStyle.width,
+                            backgroundColor: barColor,
+                          }}
+                          className={`absolute h-[22px] rounded-[3px] shadow flex items-center justify-between px-2 text-xs font-semibold cursor-pointer transition-all duration-150 hover:brightness-110 hover:shadow-lg hover:z-20 ${
+                            isDone ? 'opacity-85' : ''
+                          }`}
+                          title={`${task.task_key}: ${task.title}`}
                         >
-                          {assignee.id}
+                          {/* Task key & title */}
+                          <div className="flex items-center space-x-1.5 truncate pr-1">
+                            <span className="text-[10px] font-mono text-white font-bold drop-shadow-sm flex-shrink-0">
+                              {task.task_key}
+                            </span>
+                            <span className="text-[11px] text-white truncate drop-shadow-sm font-medium">
+                              {task.title}
+                            </span>
+                          </div>
+
+                          {/* Assignee Avatar Circle */}
+                          {initials && (
+                            <div
+                              style={{ backgroundColor: avatarColor }}
+                              className="w-4 h-4 rounded-full text-[8px] font-bold text-white flex items-center justify-center border border-white/30 flex-shrink-0 ml-1 shadow-inner"
+                              title={`Assigned to ${task.assignee}`}
+                            >
+                              {initials}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             )}
           </div>

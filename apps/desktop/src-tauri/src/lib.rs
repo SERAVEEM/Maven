@@ -89,12 +89,21 @@ pub fn run() {
             commands::restore_task,
             commands::get_notes,
             commands::create_note,
+            commands::update_note,
+            commands::restore_note,
             commands::search_notes,
             commands::soft_delete_note,
+            commands::get_tags,
+            commands::create_tag,
+            commands::set_note_tags,
             commands::get_projects,
             commands::create_project,
+            commands::update_project,
+            commands::delete_project,
             commands::get_calendar_events,
             commands::create_calendar_event,
+            commands::update_calendar_event,
+            commands::delete_calendar_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running MAVEN tauri application");

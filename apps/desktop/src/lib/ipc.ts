@@ -8,11 +8,16 @@ import {
   Task,
   Project,
   Note,
+  Tag,
   CalendarEvent,
   CreateTaskDto,
   UpdateTaskDto,
+  UpdateProjectDto,
+  DeleteProjectResult,
   CreateNoteDto,
+  UpdateNoteDto,
   CreateCalendarEventDto,
+  UpdateCalendarEventDto,
   CommandIntent,
   CommandResult,
 } from '@maven/contracts';
@@ -28,16 +33,27 @@ export interface IIpcClient {
   // Projects
   getProjects(): Promise<Project[]>;
   createProject(name: string, description?: string, color?: string): Promise<Project>;
+  updateProject(dto: UpdateProjectDto): Promise<Project>;
+  deleteProject(id: string): Promise<DeleteProjectResult>;
 
   // Notes
   getNotes(includeDeleted?: boolean): Promise<Note[]>;
   createNote(dto: CreateNoteDto): Promise<Note>;
+  updateNote(dto: UpdateNoteDto): Promise<Note>;
   softDeleteNote(id: string): Promise<boolean>;
+  restoreNote(id: string): Promise<boolean>;
   searchNotes(query: string): Promise<Note[]>;
+
+  // Tags
+  getTags(): Promise<Tag[]>;
+  createTag(name: string): Promise<Tag>;
+  setNoteTags(noteId: string, tagIds: string[]): Promise<Tag[]>;
 
   // Calendar
   getCalendarEvents(): Promise<CalendarEvent[]>;
   createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent>;
+  updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent>;
+  deleteCalendarEvent(id: string): Promise<boolean>;
 
   // Command Interpreter
   interpretCommand(input: string): Promise<CommandIntent>;
@@ -168,6 +184,7 @@ class MockIpcProvider implements IIpcClient {
   private tasks: Task[] = [];
   private projects: Project[] = [];
   private notes: Note[] = [];
+  private tags: Tag[] = [];
   private events: CalendarEvent[] = [];
 
   constructor() {
@@ -182,6 +199,7 @@ class MockIpcProvider implements IIpcClient {
       const t = localStorage.getItem('maven_mock_tasks');
       const p = localStorage.getItem('maven_mock_projects');
       const n = localStorage.getItem('maven_mock_notes');
+      const tg = localStorage.getItem('maven_mock_tags');
       const e = localStorage.getItem('maven_mock_events');
       if (t) {
         const parsed = JSON.parse(t);
@@ -199,6 +217,7 @@ class MockIpcProvider implements IIpcClient {
       }
       if (p) this.projects = JSON.parse(p);
       if (n) this.notes = JSON.parse(n);
+      if (tg) this.tags = JSON.parse(tg);
       if (e) this.events = JSON.parse(e);
 
       const projId = 'proj-gpl';
@@ -587,6 +606,7 @@ class MockIpcProvider implements IIpcClient {
       localStorage.setItem('maven_mock_tasks', JSON.stringify(this.tasks));
       localStorage.setItem('maven_mock_projects', JSON.stringify(this.projects));
       localStorage.setItem('maven_mock_notes', JSON.stringify(this.notes));
+      localStorage.setItem('maven_mock_tags', JSON.stringify(this.tags));
       localStorage.setItem('maven_mock_events', JSON.stringify(this.events));
     } catch {
       // ignore
@@ -804,6 +824,14 @@ class MockIpcProvider implements IIpcClient {
       },
     ];
 
+    const seedTags: Tag[] = [
+      { id: 'tag-arch', name: 'Architecture', created_at: now },
+      { id: 'tag-frontend', name: 'Frontend', created_at: now },
+      { id: 'tag-sqlite', name: 'SQLite', created_at: now },
+      { id: 'tag-design', name: 'Design', created_at: now },
+    ];
+    this.tags = seedTags;
+
     this.notes = [
       {
         id: 'note-01',
@@ -813,6 +841,7 @@ class MockIpcProvider implements IIpcClient {
         created_at: now,
         updated_at: now,
         deleted_at: null,
+        tags: [seedTags[0]!, seedTags[2]!],
       },
     ];
 
@@ -938,12 +967,57 @@ class MockIpcProvider implements IIpcClient {
     return newProj;
   }
 
+  async updateProject(dto: UpdateProjectDto): Promise<Project> {
+    const idx = this.projects.findIndex((p) => p.id === dto.id);
+    if (idx === -1) throw new Error('Project not found');
+    const existing = this.projects[idx]!;
+    const now = new Date().toISOString();
+    const updated: Project = {
+      ...existing,
+      name: dto.name !== undefined ? dto.name.trim() : existing.name,
+      description: dto.description !== undefined ? dto.description : existing.description,
+      status: dto.status !== undefined ? dto.status : existing.status,
+      color: dto.color !== undefined ? dto.color : existing.color,
+      updated_at: now,
+    };
+    this.projects[idx] = updated;
+    this.saveToStorage();
+    return updated;
+  }
+
+  async deleteProject(id: string): Promise<DeleteProjectResult> {
+    const projIdx = this.projects.findIndex((p) => p.id === id);
+    if (projIdx === -1) {
+      return { deleted: false, unlinked_tasks: 0 };
+    }
+    // BR-004: In an ACID transaction equivalent, unlinks tasks before deleting the project
+    let unlinked_tasks = 0;
+    this.tasks = this.tasks.map((t) => {
+      if (t.project_id === id) {
+        unlinked_tasks++;
+        return {
+          ...t,
+          project_id: null,
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return t;
+    });
+    this.projects.splice(projIdx, 1);
+    this.saveToStorage();
+    return { deleted: true, unlinked_tasks };
+  }
+
   async getNotes(includeDeleted = false): Promise<Note[]> {
     return this.notes.filter((n) => (includeDeleted ? true : n.deleted_at === null));
   }
 
   async createNote(dto: CreateNoteDto): Promise<Note> {
     const now = new Date().toISOString();
+    let tags: Tag[] = [];
+    if (dto.tag_ids && dto.tag_ids.length > 0) {
+      tags = this.tags.filter((t) => dto.tag_ids!.includes(t.id));
+    }
     const newNote: Note = {
       id: `note-${Date.now()}`,
       title: dto.title.trim(),
@@ -951,16 +1025,47 @@ class MockIpcProvider implements IIpcClient {
       created_at: now,
       updated_at: now,
       deleted_at: null,
+      tags,
     };
     this.notes.unshift(newNote);
     this.saveToStorage();
     return newNote;
   }
 
+  async updateNote(dto: UpdateNoteDto): Promise<Note> {
+    const idx = this.notes.findIndex((n) => n.id === dto.id);
+    if (idx === -1) throw new Error('Note not found');
+    const existing = this.notes[idx]!;
+    const now = new Date().toISOString();
+    let tags = existing.tags;
+    if (dto.tag_ids) {
+      tags = this.tags.filter((t) => dto.tag_ids!.includes(t.id));
+    }
+    const updated: Note = {
+      ...existing,
+      title: dto.title !== undefined ? dto.title.trim() : existing.title,
+      content: dto.content !== undefined ? dto.content : existing.content,
+      tags,
+      updated_at: now,
+    };
+    this.notes[idx] = updated;
+    this.saveToStorage();
+    return updated;
+  }
+
   async softDeleteNote(id: string): Promise<boolean> {
     const idx = this.notes.findIndex((n) => n.id === id);
     if (idx === -1) return false;
     this.notes[idx]!.deleted_at = new Date().toISOString();
+    this.saveToStorage();
+    return true;
+  }
+
+  async restoreNote(id: string): Promise<boolean> {
+    const idx = this.notes.findIndex((n) => n.id === id);
+    if (idx === -1) return false;
+    this.notes[idx]!.deleted_at = null;
+    this.notes[idx]!.updated_at = new Date().toISOString();
     this.saveToStorage();
     return true;
   }
@@ -976,6 +1081,36 @@ class MockIpcProvider implements IIpcClient {
     );
   }
 
+  async getTags(): Promise<Tag[]> {
+    return [...this.tags].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createTag(name: string): Promise<Tag> {
+    const cleanName = name.trim();
+    if (!cleanName) throw new Error('Tag name cannot be empty');
+    const existing = this.tags.find((t) => t.name.toLowerCase() === cleanName.toLowerCase());
+    if (existing) return existing;
+    const now = new Date().toISOString();
+    const newTag: Tag = {
+      id: `tag-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: cleanName,
+      created_at: now,
+    };
+    this.tags.push(newTag);
+    this.saveToStorage();
+    return newTag;
+  }
+
+  async setNoteTags(noteId: string, tagIds: string[]): Promise<Tag[]> {
+    const idx = this.notes.findIndex((n) => n.id === noteId);
+    if (idx === -1) throw new Error('Note not found');
+    const tags = this.tags.filter((t) => tagIds.includes(t.id));
+    this.notes[idx]!.tags = tags;
+    this.notes[idx]!.updated_at = new Date().toISOString();
+    this.saveToStorage();
+    return tags;
+  }
+
   async getCalendarEvents(): Promise<CalendarEvent[]> {
     return this.events.sort(
       (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
@@ -983,10 +1118,15 @@ class MockIpcProvider implements IIpcClient {
   }
 
   async createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent> {
+    const title = dto.title.trim();
+    if (!title) throw new Error('Event title cannot be empty');
+    if (dto.ends_at && dto.ends_at <= dto.starts_at) {
+      throw new Error('BR-002: ends_at must be strictly greater than starts_at');
+    }
     const now = new Date().toISOString();
     const newEvent: CalendarEvent = {
       id: `event-${Date.now()}`,
-      title: dto.title.trim(),
+      title,
       description: dto.description || null,
       location: dto.location || null,
       starts_at: dto.starts_at,
@@ -1000,6 +1140,49 @@ class MockIpcProvider implements IIpcClient {
     this.events.push(newEvent);
     this.saveToStorage();
     return newEvent;
+  }
+
+  async updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent> {
+    const idx = this.events.findIndex((e) => e.id === dto.id);
+    if (idx === -1) throw new Error('Calendar event not found');
+    const existing = this.events[idx]!;
+    const now = new Date().toISOString();
+
+    const title = dto.title !== undefined ? dto.title.trim() : existing.title;
+    if (!title) throw new Error('Event title cannot be empty');
+
+    const starts_at = dto.starts_at !== undefined ? dto.starts_at : existing.starts_at;
+    const ends_at = dto.ends_at !== undefined ? dto.ends_at : existing.ends_at;
+
+    // BR-002: ends_at > starts_at
+    if (ends_at && ends_at <= starts_at) {
+      throw new Error('BR-002: ends_at must be strictly greater than starts_at');
+    }
+
+    const updated: CalendarEvent = {
+      ...existing,
+      title,
+      description: dto.description !== undefined ? dto.description : existing.description,
+      location: dto.location !== undefined ? dto.location : existing.location,
+      starts_at,
+      ends_at,
+      timezone: dto.timezone !== undefined ? dto.timezone : existing.timezone,
+      all_day: dto.all_day !== undefined ? dto.all_day : existing.all_day,
+      recurrence_rule:
+        dto.recurrence_rule !== undefined ? dto.recurrence_rule : existing.recurrence_rule,
+      updated_at: now,
+    };
+    this.events[idx] = updated;
+    this.saveToStorage();
+    return updated;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<boolean> {
+    const idx = this.events.findIndex((e) => e.id === id);
+    if (idx === -1) return false;
+    this.events.splice(idx, 1);
+    this.saveToStorage();
+    return true;
   }
 
   async interpretCommand(input: string): Promise<CommandIntent> {
@@ -1097,6 +1280,14 @@ class TauriIpcClient implements IIpcClient {
     return invoke<Project>('create_project', { payload: { name, description, color } });
   }
 
+  updateProject(dto: UpdateProjectDto): Promise<Project> {
+    return invoke<Project>('update_project', { payload: dto });
+  }
+
+  deleteProject(id: string): Promise<DeleteProjectResult> {
+    return invoke<DeleteProjectResult>('delete_project', { id });
+  }
+
   getNotes(includeDeleted = false): Promise<Note[]> {
     return invoke<Note[]>('get_notes', { includeDeleted });
   }
@@ -1105,12 +1296,32 @@ class TauriIpcClient implements IIpcClient {
     return invoke<Note>('create_note', { payload: dto });
   }
 
+  updateNote(dto: UpdateNoteDto): Promise<Note> {
+    return invoke<Note>('update_note', { payload: dto });
+  }
+
   softDeleteNote(id: string): Promise<boolean> {
     return invoke<boolean>('soft_delete_note', { id });
   }
 
+  restoreNote(id: string): Promise<boolean> {
+    return invoke<boolean>('restore_note', { id });
+  }
+
   searchNotes(query: string): Promise<Note[]> {
     return invoke<Note[]>('search_notes', { query });
+  }
+
+  getTags(): Promise<Tag[]> {
+    return invoke<Tag[]>('get_tags');
+  }
+
+  createTag(name: string): Promise<Tag> {
+    return invoke<Tag>('create_tag', { payload: { name } });
+  }
+
+  setNoteTags(noteId: string, tagIds: string[]): Promise<Tag[]> {
+    return invoke<Tag[]>('set_note_tags', { payload: { note_id: noteId, tag_ids: tagIds } });
   }
 
   getCalendarEvents(): Promise<CalendarEvent[]> {
@@ -1119,6 +1330,14 @@ class TauriIpcClient implements IIpcClient {
 
   createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent> {
     return invoke<CalendarEvent>('create_calendar_event', { payload: dto });
+  }
+
+  updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent> {
+    return invoke<CalendarEvent>('update_calendar_event', { payload: dto });
+  }
+
+  deleteCalendarEvent(id: string): Promise<boolean> {
+    return invoke<boolean>('delete_calendar_event', { id });
   }
 
   interpretCommand(input: string): Promise<CommandIntent> {

@@ -143,7 +143,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
 
       // Realistic audio fallback
       const timer = setTimeout(() => {
-        const simulatedText = 'buat tugas GPL-66 Security Audit besok urgent';
+        const simulatedText = 'buat tugas Review laporan besok urgent';
         setVoiceTranscript(simulatedText);
         stopVoiceListening();
         executeVoiceCommand(simulatedText);
@@ -234,7 +234,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({
                   <span className="truncate text-[#8c9bab]">{activeTask.title}</span>
                 </span>
               ) : (
-                <span className="text-[#738496]">Perspective x GPL</span>
+                <span className="text-[#738496]">MAVEN Personal</span>
               )}
             </div>
 

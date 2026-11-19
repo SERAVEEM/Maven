@@ -88,7 +88,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
     }
 
     const timer = setTimeout(() => {
-      setQuery('buat tugas GPL-66 Security Review besok urgent');
+      setQuery('buat tugas Review laporan besok urgent');
       stopVoiceListening();
     }, 2400);
 
@@ -163,7 +163,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             placeholder={
               isListening
                 ? 'Mendengarkan suara Anda... (Bicara sekarang)'
-                : "Type a command or issue... (e.g. 'buat tugas GPL-66 Review besok urgent')"
+                : "Type a command or task... (e.g. 'buat tugas Review laporan besok urgent')"
             }
             className="w-full bg-transparent text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none"
           />
@@ -234,13 +234,13 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
-              onClick={() => handleQuickPreset('buat tugas GPL-')}
+              onClick={() => handleQuickPreset('buat tugas Review laporan besok urgent')}
               className="flex items-center gap-2.5 p-2 rounded-[3px] bg-[#22272b] hover:bg-[#282e33] border border-[#282e33] text-[#c7d1db] transition-colors text-left"
             >
               <CheckSquare className="w-4 h-4 text-[#579dff] flex-shrink-0" />
               <div className="min-w-0">
-                <div className="font-semibold text-xs text-[#c7d1db]">Create GPL Issue</div>
-                <div className="text-[10px] text-[#738496] truncate">buat tugas GPL-X [title]</div>
+                <div className="font-semibold text-xs text-[#c7d1db]">Create Task</div>
+                <div className="text-[10px] text-[#738496] truncate">buat tugas [title] besok urgent</div>
               </div>
             </button>
 

@@ -13,17 +13,11 @@ import {
   Globe,
 } from 'lucide-react';
 
+import { toLocalDatetimeInput } from '../../lib/ui-helpers';
+
 interface EventModalState {
   mode: 'create' | 'edit';
   event?: CalendarEvent;
-}
-
-function toLocalInputString(isoStr?: string | null): string {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export const CalendarAgendaView: React.FC = () => {
@@ -78,9 +72,9 @@ export const CalendarAgendaView: React.FC = () => {
   const openCreateModal = () => {
     const now = new Date();
     now.setMinutes(0, 0, 0);
-    const startStr = toLocalInputString(now.toISOString());
+    const startStr = toLocalDatetimeInput(now.toISOString());
     const later = new Date(now.getTime() + 60 * 60 * 1000);
-    const endStr = toLocalInputString(later.toISOString());
+    const endStr = toLocalDatetimeInput(later.toISOString());
 
     setTitle('');
     setDescription('');
@@ -97,8 +91,8 @@ export const CalendarAgendaView: React.FC = () => {
     setTitle(evt.title);
     setDescription(evt.description || '');
     setLocation(evt.location || '');
-    setStartsAt(toLocalInputString(evt.starts_at));
-    setEndsAt(toLocalInputString(evt.ends_at));
+    setStartsAt(toLocalDatetimeInput(evt.starts_at));
+    setEndsAt(toLocalDatetimeInput(evt.ends_at));
     setAllDay(evt.all_day);
     setEventTimezone(evt.timezone || detectedTimezone);
     setErrorMessage(null);

@@ -23,7 +23,7 @@ export const ChatView: React.FC = () => {
     {
       id: 'msg-welcome',
       sender: 'assistant',
-      text: 'Halo! Saya MAVEN Assistant. Anda dapat mengetik instruksi bahasa alami seperti "buat tugas GPL-66 Security Review besok urgent" atau "ingatkan sprint review lusa".',
+      text: 'Halo! Saya MAVEN Assistant. Anda dapat mengetik instruksi bahasa alami seperti "buat tugas Review laporan besok urgent" atau "ingatkan sprint review lusa".',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -110,7 +110,7 @@ export const ChatView: React.FC = () => {
             </span>
           </h2>
           <p className="text-xs text-[#8c9bab] mt-0.5">
-            Natural language command dispatcher for Perspective x GPL
+            Natural language command dispatcher for MAVEN Personal
           </p>
         </div>
       </div>
@@ -203,7 +203,7 @@ export const ChatView: React.FC = () => {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Type natural language command... (e.g. 'buat tugas GPL-66 Testing besok urgent')"
+          placeholder="Type natural language command... (e.g. 'buat tugas Review laporan besok urgent')"
           className="w-full bg-[#161a1d] border border-[#282e33] rounded-[3px] pl-3.5 pr-20 py-2.5 text-xs text-[#c7d1db] placeholder-[#738496] focus:outline-none focus:border-[#579dff]"
         />
         <button

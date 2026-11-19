@@ -3,6 +3,7 @@
  * Transparently supports Native Tauri 2 Host IPC or In-Memory Mock Provider (for browser dev)
  */
 
+import { invoke } from '@tauri-apps/api/core';
 import {
   Task,
   Project,
@@ -47,7 +48,7 @@ export interface IIpcClient {
  * Deterministic Rule-Based Parser (0 MB RAM, <2ms)
  * Maps natural language patterns to structured intents
  */
-function parseDeterministicInput(input: string): CommandIntent | null {
+export function parseDeterministicInput(input: string): CommandIntent | null {
   const trimmed = input.trim();
   const lower = trimmed.toLowerCase();
 
@@ -1002,57 +1003,139 @@ class MockIpcProvider implements IIpcClient {
   }
 
   async interpretCommand(input: string): Promise<CommandIntent> {
-    // 1. Try Deterministic Engine first (<2ms, 0 RAM)
-    const deterministic = parseDeterministicInput(input);
-    if (deterministic) {
-      return deterministic;
-    }
-
-    // 2. Simulated Local AI fallback for ambiguous queries
-    return {
-      intent: 'clarification_needed',
-      confidence: 0.65,
-      is_deterministic: false,
-      parameters: { original_input: input },
-      requires_confirmation: false,
-      clarification_question: `Saya belum sepenuhnya memahami instruksi "${input}". Apakah Anda ingin membuat Tugas baru, Pengingat, atau Catatan?`,
-    };
+    return interpretCommandInput(input);
   }
 
   async executeIntent(intent: CommandIntent): Promise<CommandResult<unknown>> {
-    switch (intent.intent) {
-      case 'create_task': {
-        const title = intent.parameters.title as string;
-        const priority = intent.parameters.priority as Task['priority'] | undefined;
-        const due_at = intent.parameters.due_at as string | undefined;
-        const task = await this.createTask({ title, priority, due_at });
-        return { success: true, data: task };
-      }
-      case 'create_note': {
-        const title = intent.parameters.title as string;
-        const content = (intent.parameters.content as string) || '';
-        const note = await this.createNote({ title, content });
-        return { success: true, data: note };
-      }
-      case 'create_reminder': {
-        const title = intent.parameters.title as string;
-        const trigger_at = intent.parameters.trigger_at as string;
-        const task = await this.createTask({
-          title,
-          priority: 'high',
-          due_at: trigger_at,
-        });
-        return { success: true, data: task };
-      }
-      default:
-        return {
-          success: false,
-          error: { code: 'UNSUPPORTED_INTENT', message: 'Intent belum didukung oleh eksekutor' },
-        };
-    }
+    return executeIntentWithClient(this, intent);
   }
 }
 
-// Singleton export
-export const ipc: IIpcClient = new MockIpcProvider();
+async function interpretCommandInput(input: string): Promise<CommandIntent> {
+  // 1. Try Deterministic Engine first (<2ms, 0 RAM)
+  const deterministic = parseDeterministicInput(input);
+  if (deterministic) {
+    return deterministic;
+  }
+
+  // 2. Simulated Local AI fallback for ambiguous queries
+  return {
+    intent: 'clarification_needed',
+    confidence: 0.65,
+    is_deterministic: false,
+    parameters: { original_input: input },
+    requires_confirmation: false,
+    clarification_question: `Saya belum sepenuhnya memahami instruksi "${input}". Apakah Anda ingin membuat Tugas baru, Pengingat, atau Catatan?`,
+  };
+}
+
+async function executeIntentWithClient(
+  client: IIpcClient,
+  intent: CommandIntent
+): Promise<CommandResult<unknown>> {
+  switch (intent.intent) {
+    case 'create_task': {
+      const title = intent.parameters.title as string;
+      const priority = intent.parameters.priority as Task['priority'] | undefined;
+      const due_at = intent.parameters.due_at as string | undefined;
+      const task = await client.createTask({ title, priority, due_at });
+      return { success: true, data: task };
+    }
+    case 'create_note': {
+      const title = intent.parameters.title as string;
+      const content = (intent.parameters.content as string) || '';
+      const note = await client.createNote({ title, content });
+      return { success: true, data: note };
+    }
+    case 'create_reminder': {
+      const title = intent.parameters.title as string;
+      const trigger_at = intent.parameters.trigger_at as string;
+      const task = await client.createTask({
+        title,
+        priority: 'high',
+        due_at: trigger_at,
+      });
+      return { success: true, data: task };
+    }
+    default:
+      return {
+        success: false,
+        error: { code: 'UNSUPPORTED_INTENT', message: 'Intent belum didukung oleh eksekutor' },
+      };
+  }
+}
+
+/**
+ * Native Tauri 2 IPC Client (single SQLite source of truth via Rust host)
+ */
+class TauriIpcClient implements IIpcClient {
+  getTasks(includeDeleted = false): Promise<Task[]> {
+    return invoke<Task[]>('get_tasks', { includeDeleted });
+  }
+
+  createTask(dto: CreateTaskDto): Promise<Task> {
+    return invoke<Task>('create_task', { payload: dto });
+  }
+
+  updateTask(dto: UpdateTaskDto): Promise<Task> {
+    return invoke<Task>('update_task', { payload: dto });
+  }
+
+  softDeleteTask(id: string): Promise<boolean> {
+    return invoke<boolean>('soft_delete_task', { id });
+  }
+
+  restoreTask(id: string): Promise<boolean> {
+    return invoke<boolean>('restore_task', { id });
+  }
+
+  getProjects(): Promise<Project[]> {
+    return invoke<Project[]>('get_projects');
+  }
+
+  createProject(name: string, description?: string, color?: string): Promise<Project> {
+    return invoke<Project>('create_project', { payload: { name, description, color } });
+  }
+
+  getNotes(includeDeleted = false): Promise<Note[]> {
+    return invoke<Note[]>('get_notes', { includeDeleted });
+  }
+
+  createNote(dto: CreateNoteDto): Promise<Note> {
+    return invoke<Note>('create_note', { payload: dto });
+  }
+
+  softDeleteNote(id: string): Promise<boolean> {
+    return invoke<boolean>('soft_delete_note', { id });
+  }
+
+  searchNotes(query: string): Promise<Note[]> {
+    return invoke<Note[]>('search_notes', { query });
+  }
+
+  getCalendarEvents(): Promise<CalendarEvent[]> {
+    return invoke<CalendarEvent[]>('get_calendar_events');
+  }
+
+  createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent> {
+    return invoke<CalendarEvent>('create_calendar_event', { payload: dto });
+  }
+
+  interpretCommand(input: string): Promise<CommandIntent> {
+    return interpretCommandInput(input);
+  }
+
+  executeIntent(intent: CommandIntent): Promise<CommandResult<unknown>> {
+    return executeIntentWithClient(this, intent);
+  }
+}
+
+export function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+// Auto-select Native Tauri IPC in desktop runtime; fall back to MockIpcProvider in browser dev
+export const ipc: IIpcClient = isTauriRuntime()
+  ? new TauriIpcClient()
+  : new MockIpcProvider();
 

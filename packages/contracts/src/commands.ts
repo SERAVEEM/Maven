@@ -27,7 +27,7 @@ export interface UpdateTaskDto {
   id: string;
   task_key?: string;
   title?: string;
-  description?: string;
+  description?: string | null;
   project_id?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority;

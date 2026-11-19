@@ -23,12 +23,10 @@ impl DatabaseState {
         })
     }
 
+    #[cfg(test)]
     pub fn in_memory() -> Result<Self, rusqlite::Error> {
         let conn = Connection::open_in_memory()?;
-        conn.execute_batch(
-            "PRAGMA foreign_keys = ON;
-             PRAGMA journal_mode = WAL;",
-        )?;
+        conn.execute_batch("PRAGMA foreign_keys = ON;")?;
 
         Ok(Self {
             conn: Mutex::new(conn),

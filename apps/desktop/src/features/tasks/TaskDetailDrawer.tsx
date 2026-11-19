@@ -15,31 +15,8 @@ import {
   Tag,
 } from 'lucide-react';
 
-export interface TeamMember {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export const TEAM_MEMBERS: TeamMember[] = [
-  { id: 'FN', name: 'Fawwaz Naufal', color: '#de350b' },
-  { id: 'RD', name: 'Rangga Dwi', color: '#6e5dc6' },
-  { id: 'AB', name: 'Aditya Bagus', color: '#0052cc' },
-  { id: 'LA', name: 'Lia Anggraini', color: '#216e4e' },
-];
-
-export function getMemberInitials(assignee?: string | null): string {
-  if (!assignee) return 'FN';
-  if (['FN', 'RD', 'AB', 'LA'].includes(assignee)) return assignee;
-  const parts = assignee.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return assignee.slice(0, 2).toUpperCase();
-}
-
-export function getMemberColor(initials: string): string {
-  const found = TEAM_MEMBERS.find((m) => m.id === initials);
-  return found ? found.color : '#579dff';
-}
+import { getMemberInitials, getMemberColor, MEMBER_COLORS } from '../../lib/ui-helpers';
+export { getMemberInitials, getMemberColor, MEMBER_COLORS };
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -173,11 +150,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim() || !currentTask) return;
-    const authorInitials = getMemberInitials(currentTask.assignee);
-    const authorMember = TEAM_MEMBERS.find((m) => m.id === authorInitials) || TEAM_MEMBERS[0]!;
+    const authorName = currentTask.assignee?.trim() || 'Me';
     const newComment: TaskComment = {
       id: `comm-${Date.now()}`,
-      author: `${authorMember.name} (${authorMember.id})`,
+      author: authorName,
       text: newCommentText.trim(),
       created_at: new Date().toISOString(),
     };
@@ -187,10 +163,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   // Assignee change
-  const handleAssigneeChange = async (nextId: string) => {
-    const member = TEAM_MEMBERS.find((m) => m.id === nextId);
-    const assigneeVal = member ? member.id : nextId;
-    await persistTaskUpdate({ assignee: assigneeVal });
+  const handleAssigneeChange = async (nextAssignee: string) => {
+    await persistTaskUpdate({ assignee: nextAssignee.trim() || null });
   };
 
   // Soft delete task
@@ -218,7 +192,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
   // Selected member metadata
   const currentInitials = getMemberInitials(currentTask.assignee);
-  const currentMember = TEAM_MEMBERS.find((m) => m.id === currentInitials) || TEAM_MEMBERS[0]!;
+  const currentColor = getMemberColor(currentInitials);
 
   return (
     <>
@@ -237,7 +211,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         <div className="h-12 border-b border-[#282e33] bg-[#161a1d] px-5 flex items-center justify-between flex-shrink-0">
           {/* Breadcrumb */}
           <div className="flex items-center space-x-2 text-xs min-w-0">
-            <span className="text-[#8c9bab] font-medium truncate">Perspective x GPL</span>
+            <span className="text-[#8c9bab] font-medium truncate">Personal Workspace</span>
             <span className="text-[#738496]">/</span>
             <div className="flex items-center space-x-1.5 flex-shrink-0">
               <Zap className="w-3.5 h-3.5 text-[#8777d9] fill-[#8777d9]/20" />
@@ -495,9 +469,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     <div className="flex items-start space-x-2.5">
                       <div
                         className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mt-1"
-                        style={{ backgroundColor: currentMember.color }}
+                        style={{ backgroundColor: currentColor }}
                       >
-                        {currentMember.id}
+                        {currentInitials}
                       </div>
                       <textarea
                         rows={2}
@@ -639,24 +613,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             {/* Assignee Selector */}
             <div>
               <label className="block text-[11px] text-[#8c9bab] mb-1">Assignee</label>
-              <div className="flex items-center space-x-2 bg-[#161a1d] border border-[#282e33] rounded-[3px] px-2 py-1.5">
+              <div className="flex items-center space-x-2 bg-[#161a1d] border border-[#282e33] rounded-[3px] px-2 py-1">
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                  style={{ backgroundColor: currentMember.color }}
+                  style={{ backgroundColor: currentColor }}
                 >
-                  {currentMember.id}
+                  {currentInitials}
                 </div>
-                <select
-                  value={currentMember.id}
-                  onChange={(e) => handleAssigneeChange(e.target.value)}
-                  className="bg-transparent text-xs text-[#c7d1db] w-full focus:outline-none cursor-pointer"
-                >
-                  {TEAM_MEMBERS.map((m) => (
-                    <option key={m.id} value={m.id} className="bg-[#1d2125] text-[#c7d1db]">
-                      {m.name} ({m.id})
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={currentTask.assignee || ''}
+                  onChange={(e) => setCurrentTask({ ...currentTask, assignee: e.target.value })}
+                  onBlur={async () => {
+                    await handleAssigneeChange(currentTask.assignee || '');
+                  }}
+                  placeholder="Personal (optional)"
+                  className="bg-transparent text-xs text-[#c7d1db] placeholder-[#738496] w-full focus:outline-none"
+                />
               </div>
             </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Project } from '@maven/contracts';
 import {
   CalendarRange,
   Kanban,
@@ -10,16 +11,10 @@ import {
   Search,
   Bell,
   Settings,
-  HelpCircle,
   Plus,
   ChevronDown,
   ChevronRight,
   FolderKanban,
-  Layers,
-  Users,
-  Target,
-  FileCode,
-  Sliders,
   PanelLeftClose,
   PanelLeftOpen,
   Palette,
@@ -59,7 +54,7 @@ export const JIRA_THEMES: JiraTheme[] = [
   },
   {
     id: 'charcoal',
-    name: 'Jira Charcoal',
+    name: 'Charcoal Slate',
     subtitle: 'Classic clean dark canvas',
     gradient: 'none',
     accent: '#8c9bab',
@@ -103,6 +98,11 @@ interface AppLayoutProps {
   currentTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   onOpenCreate?: () => void;
+  projects?: Project[];
+  activeProjectId?: string | null;
+  onSelectProject?: (projectId: string | null) => void;
+  backlogCount?: number;
+  notificationCount?: number;
   children: React.ReactNode;
 }
 
@@ -110,10 +110,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   currentTab,
   onTabChange,
   onOpenCreate,
+  projects = [],
+  activeProjectId = null,
+  onSelectProject,
+  backlogCount = 0,
+  notificationCount = 0,
   children,
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isPlanningOpen, setIsPlanningOpen] = useState(true);
+  const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
+  const projectMenuRef = useRef<HTMLDivElement>(null);
 
   // ponytail: theme persistence in localStorage
   const [bgTheme, setBgTheme] = useState<string>(() => {
@@ -127,12 +134,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       if (themePopoverRef.current && !themePopoverRef.current.contains(e.target as Node)) {
         setIsThemeOpen(false);
       }
+      if (projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) {
+        setIsProjectMenuOpen(false);
+      }
     };
-    if (isThemeOpen) {
+    if (isThemeOpen || isProjectMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isThemeOpen]);
+  }, [isThemeOpen, isProjectMenuOpen]);
 
   const handleSelectTheme = (themeId: string) => {
     setBgTheme(themeId);
@@ -141,10 +151,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   const currentTheme = JIRA_THEMES.find((t) => t.id === bgTheme) || JIRA_THEMES[0]!;
 
+  const activeProject = projects.find((p) => p.id === activeProjectId);
+  const activeWorkspaceName = activeProject ? activeProject.name : 'Personal Workspace (All)';
+  const activeWorkspaceColor = activeProject ? (activeProject.color || '#579dff') : '#216e4e';
+  const activeWorkspaceInitial = activeProject ? activeProject.name[0]?.toUpperCase() || 'P' : 'P';
+
   const navItems = [
     { id: 'timeline' as NavTab, label: 'Timeline', icon: CalendarRange, badge: null },
     { id: 'board' as NavTab, label: 'Board', icon: Kanban, badge: null },
-    { id: 'backlog' as NavTab, label: 'Backlog', icon: ListTodo, badge: '13' },
+    {
+      id: 'backlog' as NavTab,
+      label: 'Backlog',
+      icon: ListTodo,
+      badge: backlogCount > 0 ? String(backlogCount) : null,
+    },
     { id: 'list' as NavTab, label: 'List', icon: CheckSquare, badge: null },
     { id: 'calendar' as NavTab, label: 'Calendar', icon: Calendar, badge: null },
     { id: 'docs' as NavTab, label: 'Docs', icon: FileText, badge: null },
@@ -155,69 +175,31 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#1d2125] text-[#b6c2cf] select-none font-sans">
       {/* 1. TOP GLOBAL NAVIGATION HEADER (Height 48px, bg #161a1d, border-b #282e33) */}
       <header className="h-12 flex-shrink-0 bg-[#161a1d] border-b border-[#282e33] px-3 flex items-center justify-between text-xs z-40">
-        {/* Left: 9-dot app switcher, Jira logo, dropdowns, "+ Create" button */}
+        {/* Left: MAVEN brand, Working Projects shortcut, "+ Create" button */}
         <div className="flex items-center space-x-2">
-          {/* 9-dot App Switcher icon */}
-          <button
-            className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
-            title="Atlassian App Switcher"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-              <circle cx="2.5" cy="2.5" r="1.5" />
-              <circle cx="8" cy="2.5" r="1.5" />
-              <circle cx="13.5" cy="2.5" r="1.5" />
-              <circle cx="2.5" cy="8" r="1.5" />
-              <circle cx="8" cy="8" r="1.5" />
-              <circle cx="13.5" cy="8" r="1.5" />
-              <circle cx="2.5" cy="13.5" r="1.5" />
-              <circle cx="8" cy="13.5" r="1.5" />
-              <circle cx="13.5" cy="13.5" r="1.5" />
-            </svg>
-          </button>
-
-          {/* Jira folded diamonds logo + text "Jira" */}
-          <div className="flex items-center space-x-1.5 px-1 py-1 mr-1">
-            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+          {/* MAVEN geometric mark + brand */}
+          <div className="flex items-center space-x-2 px-1 py-1 mr-1">
+            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
               <path
-                d="M11.9 1.5C11.9 5.5 8.7 8.7 4.7 8.7H2.2c-.4 0-.7.3-.7.7v3.2c0 4 3.2 7.2 7.2 7.2h3.2c.4 0 .7-.3.7-.7V17c0-4 3.2-7.2 7.2-7.2h2.5c.4 0 .7-.3.7-.7V5.9c0-4-3.2-7.2-7.2-7.2h-3.9z"
-                fill="#579dff"
+                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                stroke="#579dff"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
-            <span className="font-bold text-sm tracking-tight text-[#b6c2cf]">Jira</span>
+            <span className="font-bold text-sm tracking-tight text-[#b6c2cf]">MAVEN</span>
           </div>
 
-          {/* Jira Navigation dropdown links */}
-          <div className="hidden md:flex items-center space-x-0.5 text-[#8c9bab]">
-            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
-              <span>Your work</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-            <button
-              onClick={() => onTabChange('projects')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors ${
-                currentTab === 'projects' ? 'bg-[#22272b] text-[#579dff]' : ''
-              }`}
-            >
-              <span>Projects</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
-              <span>Filters</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
-              <span>Dashboards</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
-              <span>Teams</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-            <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors">
-              <span>Apps</span>
-              <ChevronDown className="w-3 h-3 text-[#738496]" />
-            </button>
-          </div>
+          {/* Working Projects shortcut button */}
+          <button
+            onClick={() => onTabChange('projects')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-[3px] hover:bg-[#22272b] hover:text-[#b6c2cf] font-medium transition-colors ${
+              currentTab === 'projects' ? 'bg-[#22272b] text-[#579dff]' : 'text-[#8c9bab]'
+            }`}
+          >
+            <span>Projects</span>
+          </button>
 
           {/* Jira Standard Blue "+ Create" Button */}
           <button
@@ -229,27 +211,32 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           </button>
         </div>
 
-        {/* Right: Global search bar, notifications with orange "9+" badge, settings, user avatar */}
+        {/* Right: Global search bar, notifications, wallpaper switcher, settings, user avatar */}
         <div className="flex items-center space-x-2">
-          {/* Global Search Bar */}
+          {/* Global Search Bar (Enter triggers Create / Command Palette) */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-[#738496] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onOpenCreate?.();
+              }}
               className="bg-[#22272b] border border-[#282e33] text-xs w-72 md:w-80 text-[#b6c2cf] placeholder-[#738496] rounded-[3px] pl-8 pr-3 py-1 focus:outline-none focus:border-[#579dff] focus:ring-1 focus:ring-[#579dff] transition-all"
             />
           </div>
 
-          {/* Notifications Bell with Orange Badge (9+) */}
+          {/* Notifications Bell (render badge ONLY when notificationCount > 0) */}
           <button
             className="relative p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
             title="Notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-0.5 right-0.5 bg-[#de350b] text-white text-[9px] font-bold rounded-full px-1 min-w-[15px] h-[14px] flex items-center justify-center leading-none border border-[#161a1d]">
-              9+
-            </span>
+            {notificationCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 bg-[#de350b] text-white text-[9px] font-bold rounded-full px-1 min-w-[15px] h-[14px] flex items-center justify-center leading-none border border-[#161a1d]">
+                {notificationCount}
+              </span>
+            )}
           </button>
 
           {/* Workspace Background Wallpaper / Glow Switcher */}
@@ -321,23 +308,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             )}
           </div>
 
-          {/* Settings cog */}
+          {/* Settings cog with tooltip */}
           <button
             className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
-            title="Settings"
+            title="Settings (coming in Sprint 6)"
           >
             <Settings className="w-4 h-4" />
           </button>
 
-          {/* Help question circle */}
-          <button
-            className="p-1.5 rounded-[3px] hover:bg-[#22272b] text-[#8c9bab] hover:text-[#b6c2cf] transition-colors"
-            title="Help"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
-
-          {/* User Avatar Circle: "FN" with deep orange background */}
+          {/* User Avatar Circle: "FN" */}
           <div
             className="w-7 h-7 rounded-full bg-[#de350b] flex items-center justify-center text-white text-xs font-bold ring-2 ring-[#282e33] cursor-pointer hover:brightness-110 transition-all flex-shrink-0"
             title="Fawwaz Naufal (FN)"
@@ -355,34 +334,46 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             isSidebarCollapsed ? 'w-12' : 'w-60'
           } flex-shrink-0 flex flex-col bg-[#181b1f] border-r border-[#22272b] text-xs transition-all duration-200 overflow-hidden relative z-20`}
         >
-          {/* Header: Spaces > Perspective x GPL */}
-          <div className="p-3 border-b border-[#22272b] flex items-center justify-between">
+          {/* Header: Interactive Active Workspace / Project Switcher */}
+          <div className="p-3 border-b border-[#282e33] flex items-center justify-between relative" ref={projectMenuRef}>
             {!isSidebarCollapsed ? (
-              <div className="flex items-center space-x-2.5 min-w-0">
-                {/* Active Space Green Square Icon */}
-                <div className="w-7 h-7 rounded-[3px] bg-[#216e4e] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0">
-                  P
+              <div
+                onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
+                className="flex items-center space-x-2.5 min-w-0 cursor-pointer p-1 -m-1 rounded-[3px] hover:bg-[#22272b] transition-colors flex-1"
+                title="Switch Workspace / Project"
+              >
+                {/* Active Workspace / Project Color Swatch */}
+                <div
+                  className="w-7 h-7 rounded-[3px] flex items-center justify-center text-white font-bold text-xs shadow-sm flex-shrink-0 transition-colors"
+                  style={{ backgroundColor: activeWorkspaceColor }}
+                >
+                  {activeWorkspaceInitial}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase font-bold text-[#738496] tracking-wider leading-none mb-0.5">
-                    Spaces
+                  <div className="text-[10px] uppercase font-bold text-[#738496] tracking-wider leading-none mb-0.5 flex items-center justify-between">
+                    <span>Workspaces</span>
+                    <ChevronDown className="w-3 h-3 text-[#738496]" />
                   </div>
                   <h2 className="font-semibold text-xs text-[#c7d1db] truncate leading-tight">
-                    Perspective x GPL
+                    {activeWorkspaceName}
                   </h2>
-                  <div className="text-[10px] text-[#738496] truncate">Software project</div>
                 </div>
               </div>
             ) : (
-              <div className="w-7 h-7 mx-auto rounded-[3px] bg-[#216e4e] flex items-center justify-center text-white font-bold text-xs">
-                P
+              <div
+                onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
+                className="w-7 h-7 mx-auto rounded-[3px] flex items-center justify-center text-white font-bold text-xs cursor-pointer shadow-sm transition-colors"
+                style={{ backgroundColor: activeWorkspaceColor }}
+                title={`Active: ${activeWorkspaceName}`}
+              >
+                {activeWorkspaceInitial}
               </div>
             )}
 
             {/* Collapse toggle button */}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-1 rounded-[3px] hover:bg-[#22272b] text-[#738496] hover:text-[#b6c2cf] transition-colors"
+              className="p-1 rounded-[3px] hover:bg-[#22272b] text-[#738496] hover:text-[#b6c2cf] transition-colors ml-1"
               title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {isSidebarCollapsed ? (
@@ -391,6 +382,66 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <PanelLeftClose className="w-3.5 h-3.5" />
               )}
             </button>
+
+            {/* Active Workspace / Project Switcher Popover */}
+            {isProjectMenuOpen && (
+              <div className="absolute left-2 top-full mt-1 w-56 bg-[#22272b] border border-[#282e33] rounded-[4px] shadow-2xl z-50 overflow-hidden py-1">
+                <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-[#738496] tracking-wider border-b border-[#282e33]">
+                  Select Workspace
+                </div>
+                <button
+                  onClick={() => {
+                    onSelectProject?.(null);
+                    setIsProjectMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-left transition-colors ${
+                    activeProjectId === null
+                      ? 'bg-[#282e33] text-[#579dff] font-semibold'
+                      : 'text-[#c7d1db] hover:bg-[#1d2125]'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 truncate">
+                    <span className="w-3 h-3 rounded-[2px] bg-[#216e4e] flex-shrink-0" />
+                    <span className="truncate">Personal Workspace (All)</span>
+                  </div>
+                  {activeProjectId === null && <Check className="w-3.5 h-3.5 text-[#579dff]" />}
+                </button>
+
+                {projects.length > 0 && (
+                  <>
+                    <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-[#738496] tracking-wider border-t border-[#282e33] mt-1">
+                      Projects
+                    </div>
+                    {projects.map((project) => {
+                      const isSelected = activeProjectId === project.id;
+                      return (
+                        <button
+                          key={project.id}
+                          onClick={() => {
+                            onSelectProject?.(project.id);
+                            setIsProjectMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-left transition-colors ${
+                            isSelected
+                              ? 'bg-[#282e33] text-[#579dff] font-semibold'
+                              : 'text-[#c7d1db] hover:bg-[#1d2125]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 truncate">
+                            <span
+                              className="w-3 h-3 rounded-[2px] flex-shrink-0"
+                              style={{ backgroundColor: project.color || '#579dff' }}
+                            />
+                            <span className="truncate">{project.name}</span>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#579dff]" />}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Navigation Links List */}
@@ -451,11 +502,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 );
               })}
 
-            {/* Bottom Tools Section */}
+            {/* Bottom Tools & Workspaces Section */}
             {!isSidebarCollapsed && (
-              <div className="pt-3 mt-2 border-t border-[#22272b] space-y-0.5">
+              <div className="pt-3 mt-2 border-t border-[#282e33] space-y-0.5">
                 <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#738496]">
-                  Tools & Spaces
+                  Workspaces
                 </div>
 
                 <button
@@ -469,37 +520,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   <FolderKanban className="w-4 h-4 text-[#8c9bab]" />
                   <span>Projects</span>
                 </button>
-
-                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
-                  <FileCode className="w-4 h-4 text-[#8c9bab]" />
-                  <span>Confluence</span>
-                </div>
-
-                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
-                  <Layers className="w-4 h-4 text-[#8c9bab]" />
-                  <span>Assets</span>
-                </div>
-
-                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
-                  <Users className="w-4 h-4 text-[#8c9bab]" />
-                  <span>Teams</span>
-                </div>
-
-                <div className="w-full flex items-center space-x-2.5 px-2.5 py-1.5 rounded-[3px] text-xs text-[#8c9bab] hover:text-[#c7d1db] hover:bg-[#22272b]/60 cursor-pointer">
-                  <Target className="w-4 h-4 text-[#8c9bab]" />
-                  <span>Goals</span>
-                </div>
               </div>
             )}
           </div>
-
-          {/* Bottom Customize Sidebar Footer */}
-          {!isSidebarCollapsed && (
-            <div className="p-2 border-t border-[#22272b] text-[#738496] hover:text-[#b6c2cf] flex items-center space-x-2 cursor-pointer transition-colors px-3 py-2">
-              <Sliders className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium">Customize sidebar</span>
-            </div>
-          )}
         </aside>
 
         {/* 3. MAIN WORK AREA (bg #1d2125 + dynamic ambient theme glow) */}

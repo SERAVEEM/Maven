@@ -98,6 +98,8 @@ pub fn run() {
             commands::set_note_tags,
             commands::get_projects,
             commands::create_project,
+            commands::update_project,
+            commands::delete_project,
             commands::get_calendar_events,
             commands::create_calendar_event,
             commands::update_calendar_event,

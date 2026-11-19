@@ -11,6 +11,8 @@ import {
   CalendarEvent,
   CreateTaskDto,
   UpdateTaskDto,
+  UpdateProjectDto,
+  DeleteProjectResult,
   CreateNoteDto,
   CreateCalendarEventDto,
   CommandIntent,
@@ -28,6 +30,8 @@ export interface IIpcClient {
   // Projects
   getProjects(): Promise<Project[]>;
   createProject(name: string, description?: string, color?: string): Promise<Project>;
+  updateProject(dto: UpdateProjectDto): Promise<Project>;
+  deleteProject(id: string): Promise<DeleteProjectResult>;
 
   // Notes
   getNotes(includeDeleted?: boolean): Promise<Note[]>;
@@ -938,6 +942,47 @@ class MockIpcProvider implements IIpcClient {
     return newProj;
   }
 
+  async updateProject(dto: UpdateProjectDto): Promise<Project> {
+    const idx = this.projects.findIndex((p) => p.id === dto.id);
+    if (idx === -1) throw new Error('Project not found');
+    const existing = this.projects[idx]!;
+    const now = new Date().toISOString();
+    const updated: Project = {
+      ...existing,
+      name: dto.name !== undefined ? dto.name.trim() : existing.name,
+      description: dto.description !== undefined ? dto.description : existing.description,
+      status: dto.status !== undefined ? dto.status : existing.status,
+      color: dto.color !== undefined ? dto.color : existing.color,
+      updated_at: now,
+    };
+    this.projects[idx] = updated;
+    this.saveToStorage();
+    return updated;
+  }
+
+  async deleteProject(id: string): Promise<DeleteProjectResult> {
+    const projIdx = this.projects.findIndex((p) => p.id === id);
+    if (projIdx === -1) {
+      return { deleted: false, unlinked_tasks: 0 };
+    }
+    // BR-004: In an ACID transaction equivalent, unlinks tasks before deleting the project
+    let unlinked_tasks = 0;
+    this.tasks = this.tasks.map((t) => {
+      if (t.project_id === id) {
+        unlinked_tasks++;
+        return {
+          ...t,
+          project_id: null,
+          updated_at: new Date().toISOString(),
+        };
+      }
+      return t;
+    });
+    this.projects.splice(projIdx, 1);
+    this.saveToStorage();
+    return { deleted: true, unlinked_tasks };
+  }
+
   async getNotes(includeDeleted = false): Promise<Note[]> {
     return this.notes.filter((n) => (includeDeleted ? true : n.deleted_at === null));
   }
@@ -1095,6 +1140,14 @@ class TauriIpcClient implements IIpcClient {
 
   createProject(name: string, description?: string, color?: string): Promise<Project> {
     return invoke<Project>('create_project', { payload: { name, description, color } });
+  }
+
+  updateProject(dto: UpdateProjectDto): Promise<Project> {
+    return invoke<Project>('update_project', { payload: dto });
+  }
+
+  deleteProject(id: string): Promise<DeleteProjectResult> {
+    return invoke<DeleteProjectResult>('delete_project', { id });
   }
 
   getNotes(includeDeleted = false): Promise<Note[]> {

@@ -93,6 +93,8 @@ pub fn run() {
             commands::soft_delete_note,
             commands::get_projects,
             commands::create_project,
+            commands::update_project,
+            commands::delete_project,
             commands::get_calendar_events,
             commands::create_calendar_event,
         ])

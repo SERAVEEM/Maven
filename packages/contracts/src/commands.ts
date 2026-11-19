@@ -3,7 +3,7 @@
  * Used across Presentation Layer and Host Backend (Tauri IPC)
  */
 
-import { Subtask, TaskComment, TaskPriority, TaskStatus } from './entities.js';
+import { Subtask, TaskComment, TaskPriority, TaskStatus, ProjectStatus } from './entities.js';
 
 // Task Commands
 export interface CreateTaskDto {
@@ -54,6 +54,19 @@ export interface CreateProjectDto {
   name: string;
   description?: string;
   color?: string;
+}
+
+export interface UpdateProjectDto {
+  id: string;
+  name?: string;
+  description?: string | null;
+  status?: ProjectStatus;
+  color?: string | null;
+}
+
+export interface DeleteProjectResult {
+  deleted: boolean;
+  unlinked_tasks: number;
 }
 
 // Note Commands

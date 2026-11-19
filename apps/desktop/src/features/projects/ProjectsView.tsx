@@ -3,7 +3,11 @@ import { Project, Task } from '@maven/contracts';
 import { ipc } from '../../lib/ipc';
 import { FolderKanban, Plus, CheckCircle2 } from 'lucide-react';
 
-export const ProjectsView: React.FC = () => {
+interface ProjectsViewProps {
+  onProjectsChanged?: () => void;
+}
+
+export const ProjectsView: React.FC<ProjectsViewProps> = ({ onProjectsChanged }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [name, setName] = useState('');
@@ -30,6 +34,7 @@ export const ProjectsView: React.FC = () => {
       setName('');
       setDescription('');
       await loadData();
+      onProjectsChanged?.();
     } finally {
       setIsSubmitting(false);
     }
@@ -83,51 +88,59 @@ export const ProjectsView: React.FC = () => {
       </form>
 
       {/* Project Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-5 overflow-y-auto flex-1 pr-1">
-        {projects.map((project) => {
-          const projectTasks = tasks.filter((t) => t.project_id === project.id || (project.name === 'Perspective x GPL' && t.task_key.startsWith('GPL-')));
-          const completedTasks = projectTasks.filter((t) => t.status === 'done');
-          const progress = projectTasks.length > 0
-            ? Math.round((completedTasks.length / projectTasks.length) * 100)
-            : 0;
+      {projects.length === 0 ? (
+        <div className="text-center py-16 border border-dashed border-[#282e33] rounded-[4px] bg-[#161a1d] mt-5">
+          <FolderKanban className="w-8 h-8 text-[#738496] mx-auto mb-2 opacity-50" />
+          <p className="text-[#c7d1db] text-xs font-semibold">No projects yet</p>
+          <p className="text-[#738496] text-[11px] mt-0.5">Create your first project workspace using the form above.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-5 overflow-y-auto flex-1 pr-1">
+          {projects.map((project) => {
+            const projectTasks = tasks.filter((t) => t.project_id === project.id);
+            const completedTasks = projectTasks.filter((t) => t.status === 'done');
+            const progress = projectTasks.length > 0
+              ? Math.round((completedTasks.length / projectTasks.length) * 100)
+              : 0;
 
-          return (
-            <div
-              key={project.id}
-              className="p-4 rounded-[4px] border border-[#282e33] bg-[#161a1d] hover:border-[#3b444c] transition-colors flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className="w-3 h-3 rounded-[2px] flex-shrink-0"
-                      style={{ backgroundColor: project.color || '#579dff' }}
-                    />
-                    <h3 className="font-semibold text-[#c7d1db] text-sm">{project.name}</h3>
+            return (
+              <div
+                key={project.id}
+                className="p-4 rounded-[4px] border border-[#282e33] bg-[#161a1d] hover:border-[#3b444c] transition-colors flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className="w-3 h-3 rounded-[2px] flex-shrink-0"
+                        style={{ backgroundColor: project.color || '#579dff' }}
+                      />
+                      <h3 className="font-semibold text-[#c7d1db] text-sm">{project.name}</h3>
+                    </div>
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-[2px] bg-[#22272b] text-[#8c9bab] border border-[#282e33]">
+                      {project.status}
+                    </span>
                   </div>
-                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-[2px] bg-[#22272b] text-[#8c9bab] border border-[#282e33]">
-                    {project.status}
+                  {project.description && (
+                    <p className="text-xs text-[#8c9bab] mb-3">{project.description}</p>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-[#282e33] text-xs text-[#8c9bab] flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FolderKanban className="w-3.5 h-3.5 text-[#579dff]" />
+                    {projectTasks.length} Issues ({completedTasks.length} done)
+                  </span>
+                  <span className="flex items-center gap-1 text-[#4bce97] font-semibold text-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {progress}%
                   </span>
                 </div>
-                {project.description && (
-                  <p className="text-xs text-[#8c9bab] mb-3">{project.description}</p>
-                )}
               </div>
-
-              <div className="pt-3 border-t border-[#282e33] text-xs text-[#8c9bab] flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <FolderKanban className="w-3.5 h-3.5 text-[#579dff]" />
-                  {projectTasks.length} Issues ({completedTasks.length} done)
-                </span>
-                <span className="flex items-center gap-1 text-[#4bce97] font-semibold text-xs">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {progress}%
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

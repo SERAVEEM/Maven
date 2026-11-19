@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Project, Task } from '@maven/contracts';
+import { ipc } from './lib/ipc';
 import { AppLayout, NavTab } from './components/layout/AppLayout';
 import { TimelineView } from './features/timeline/TimelineView';
 import { KanbanBoardView } from './features/tasks/KanbanBoardView';
@@ -17,6 +19,30 @@ export const App: React.FC = () => {
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const refreshWorkspaceMeta = useCallback(async () => {
+    try {
+      const [p, t] = await Promise.all([ipc.getProjects(), ipc.getTasks(false)]);
+      setProjects(p);
+      setTasks(t);
+    } catch (err) {
+      console.error('Failed to refresh workspace meta', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshWorkspaceMeta();
+  }, [refreshWorkspaceMeta, currentTab, activeProjectId]);
+
+  const backlogCount = tasks.filter((t) => t.status === 'backlog').length;
+  const notificationCount = 0; // ponytail: 0 until Sprint 3 reminders
+
+  const activeProject = projects.find((p) => p.id === activeProjectId);
+  const activeProjectName = activeProject ? activeProject.name : 'Personal Workspace';
 
   // Global keyboard shortcuts: Alt+K (Command Palette), Alt+V (Voice Push-to-Talk), Esc (Close)
   useEffect(() => {
@@ -48,6 +74,7 @@ export const App: React.FC = () => {
   const handleActionSuccess = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+    refreshWorkspaceMeta();
   };
 
   const handleTriggerVoice = () => {
@@ -92,17 +119,42 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         onTabChange={setCurrentTab}
         onOpenCreate={() => setIsQuickActionOpen(true)}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={setActiveProjectId}
+        backlogCount={backlogCount}
+        notificationCount={notificationCount}
       >
         {currentTab === 'timeline' && (
           <TimelineView
             onTabChange={setCurrentTab}
             onOpenCreate={() => setIsQuickActionOpen(true)}
+            activeProjectId={activeProjectId}
+            activeProjectName={activeProjectName}
           />
         )}
-        {currentTab === 'board' && <KanbanBoardView />}
-        {currentTab === 'backlog' && <BacklogView />}
-        {currentTab === 'list' && <TaskListView />}
-        {currentTab === 'projects' && <ProjectsView />}
+        {currentTab === 'board' && (
+          <KanbanBoardView
+            activeProjectId={activeProjectId}
+            activeProjectName={activeProjectName}
+          />
+        )}
+        {currentTab === 'backlog' && (
+          <BacklogView
+            activeProjectId={activeProjectId}
+            activeProjectName={activeProjectName}
+          />
+        )}
+        {currentTab === 'list' && (
+          <TaskListView
+            activeProjectId={activeProjectId}
+          />
+        )}
+        {currentTab === 'projects' && (
+          <ProjectsView
+            onProjectsChanged={refreshWorkspaceMeta}
+          />
+        )}
         {currentTab === 'calendar' && <CalendarAgendaView />}
         {currentTab === 'docs' && <NotesView />}
         {currentTab === 'chat' && <ChatView />}

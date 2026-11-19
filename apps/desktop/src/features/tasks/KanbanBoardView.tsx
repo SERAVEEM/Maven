@@ -20,7 +20,15 @@ import {
   Columns,
 } from 'lucide-react';
 
-export const KanbanBoardView: React.FC = () => {
+interface KanbanBoardViewProps {
+  activeProjectId?: string | null;
+  activeProjectName?: string;
+}
+
+export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
+  activeProjectId,
+  activeProjectName,
+}) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showBacklog, setShowBacklog] = useState(false);
@@ -69,7 +77,7 @@ export const KanbanBoardView: React.FC = () => {
       title: quickCreateTitle.trim(),
       status: colStatus,
       priority: 'medium',
-      project_id: 'proj-gpl',
+      project_id: activeProjectId || undefined,
     });
     setTasks((prev) => [created, ...prev]);
     setQuickCreateTitle('');
@@ -78,12 +86,13 @@ export const KanbanBoardView: React.FC = () => {
   };
 
   // Group tasks by column
-  const backlogTasks = tasks.filter((t) => t.status === 'backlog');
-  const todoTasks = tasks.filter((t) =>
+  const filteredTasks = activeProjectId ? tasks.filter((t) => t.project_id === activeProjectId) : tasks;
+  const backlogTasks = filteredTasks.filter((t) => t.status === 'backlog');
+  const todoTasks = filteredTasks.filter((t) =>
     showBacklog ? t.status === 'todo' : t.status === 'todo' || t.status === 'backlog'
   );
-  const inProgressTasks = tasks.filter((t) => t.status === 'in_progress');
-  const doneTasks = tasks.filter((t) => t.status === 'done');
+  const inProgressTasks = filteredTasks.filter((t) => t.status === 'in_progress');
+  const doneTasks = filteredTasks.filter((t) => t.status === 'done');
 
   interface ColumnDef {
     id: TaskStatus;
@@ -146,12 +155,12 @@ export const KanbanBoardView: React.FC = () => {
           <div className="flex items-center space-x-2 text-xs text-[#8c9bab]">
             <span>Spaces</span>
             <span>&gt;</span>
-            <span className="text-[#c7d1db] font-semibold">Perspective x GPL</span>
+            <span className="text-[#c7d1db] font-semibold">{activeProjectName || 'Personal Workspace'}</span>
             <span>&gt;</span>
             <span>Board</span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-[#c7d1db] mt-1">
-            GPL Kanban Board
+            Kanban Board
           </h1>
         </div>
 
@@ -347,13 +356,15 @@ export const KanbanBoardView: React.FC = () => {
                         )}
 
                         {/* Assignee Avatar */}
-                        <div
-                          className="w-5 h-5 rounded-full text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0 shadow-sm"
-                          style={{ backgroundColor: color }}
-                          title={`Assigned to ${task.assignee || 'FN'}`}
-                        >
-                          {initials}
-                        </div>
+                        {task.assignee && (
+                          <div
+                            className="w-5 h-5 rounded-full text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0 shadow-sm"
+                            style={{ backgroundColor: color }}
+                            title={`Assigned to ${task.assignee}`}
+                          >
+                            {initials}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

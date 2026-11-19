@@ -11,7 +11,11 @@ import {
   Zap,
 } from 'lucide-react';
 
-export const TaskListView: React.FC = () => {
+interface TaskListViewProps {
+  activeProjectId?: string | null;
+}
+
+export const TaskListView: React.FC<TaskListViewProps> = ({ activeProjectId }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTab, setActiveTab] = useState<'active' | 'done' | 'trash'>('active');
@@ -20,8 +24,12 @@ export const TaskListView: React.FC = () => {
   // New task form state
   const [newTitle, setNewTitle] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
-  const [newProjectId, setNewProjectId] = useState<string>('');
+  const [newProjectId, setNewProjectId] = useState<string>(activeProjectId || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setNewProjectId(activeProjectId || '');
+  }, [activeProjectId]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -78,7 +86,9 @@ export const TaskListView: React.FC = () => {
     await loadData();
   };
 
-  const filteredTasks = tasks.filter((t) => {
+  const scopedTasks = activeProjectId ? tasks.filter((t) => t.project_id === activeProjectId) : tasks;
+
+  const filteredTasks = scopedTasks.filter((t) => {
     if (activeTab === 'trash') return t.deleted_at !== null;
     if (t.deleted_at !== null) return false;
     if (activeTab === 'done') return t.status === 'done';
@@ -105,7 +115,7 @@ export const TaskListView: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold tracking-tight text-[#c7d1db]">List Issues</h2>
           <p className="text-xs text-[#8c9bab] mt-0.5">
-            Perspective x GPL issue items with soft-delete safety
+            Personal tasks with soft-delete safety
           </p>
         </div>
 
@@ -119,7 +129,7 @@ export const TaskListView: React.FC = () => {
                 : 'text-[#8c9bab] hover:text-[#c7d1db]'
             }`}
           >
-            Active ({tasks.filter((t) => t.deleted_at === null && t.status !== 'done').length})
+            Active ({scopedTasks.filter((t) => t.deleted_at === null && t.status !== 'done').length})
           </button>
           <button
             onClick={() => setActiveTab('done')}
@@ -129,7 +139,7 @@ export const TaskListView: React.FC = () => {
                 : 'text-[#8c9bab] hover:text-[#c7d1db]'
             }`}
           >
-            Completed ({tasks.filter((t) => t.deleted_at === null && t.status === 'done').length})
+            Completed ({scopedTasks.filter((t) => t.deleted_at === null && t.status === 'done').length})
           </button>
           <button
             onClick={() => setActiveTab('trash')}
@@ -139,7 +149,7 @@ export const TaskListView: React.FC = () => {
                 : 'text-[#8c9bab] hover:text-[#c7d1db]'
             }`}
           >
-            Trash ({tasks.filter((t) => t.deleted_at !== null).length})
+            Trash ({scopedTasks.filter((t) => t.deleted_at !== null).length})
           </button>
         </div>
       </div>
@@ -171,7 +181,7 @@ export const TaskListView: React.FC = () => {
             onChange={(e) => setNewProjectId(e.target.value)}
             className="bg-[#22272b] border border-[#282e33] rounded-[3px] px-2.5 py-1.5 text-xs text-[#c7d1db] focus:outline-none focus:border-[#579dff] max-w-[150px]"
           >
-            <option value="">Perspective x GPL</option>
+            <option value="">No project (Personal)</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

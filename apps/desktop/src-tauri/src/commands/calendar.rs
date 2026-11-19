@@ -28,6 +28,7 @@ pub struct CreateCalendarEventPayload {
     pub ends_at: Option<String>,
     pub timezone: Option<String>,
     pub all_day: Option<bool>,
+    pub recurrence_rule: Option<String>,
 }
 
 #[tauri::command]
@@ -82,7 +83,7 @@ pub fn create_calendar_event(
 
     conn.execute(
         "INSERT INTO calendar_events (id, title, description, location, starts_at, ends_at, timezone, all_day, recurrence_rule, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, ?10)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
             &id,
             &title,
@@ -92,6 +93,7 @@ pub fn create_calendar_event(
             &payload.ends_at,
             &timezone,
             if all_day { 1 } else { 0 },
+            &payload.recurrence_rule,
             &now,
             &now,
         ],
@@ -107,7 +109,7 @@ pub fn create_calendar_event(
         ends_at: payload.ends_at,
         timezone,
         all_day,
-        recurrence_rule: None,
+        recurrence_rule: payload.recurrence_rule,
         created_at: now.clone(),
         updated_at: now,
     })

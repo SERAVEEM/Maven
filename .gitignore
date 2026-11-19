@@ -30,10 +30,17 @@ Thumbs.db
 .env
 .env.local
 
-# Documentation (exclude all .md except README.md and repo agent rules)
+# AI / Agent & Editor Configs (local-only, never commit)
+.agents/
+.cursor/
+.cursorrules
+.claude/
+.gemini/
+AGENTS.md
+CLAUDE.md
+
+# Documentation (exclude all .md except README.md)
 *.md
 !README.md
-!AGENTS.md
-!.agents/**
 
 

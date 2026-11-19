@@ -95,6 +95,8 @@ pub fn run() {
             commands::create_project,
             commands::get_calendar_events,
             commands::create_calendar_event,
+            commands::update_calendar_event,
+            commands::delete_calendar_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running MAVEN tauri application");

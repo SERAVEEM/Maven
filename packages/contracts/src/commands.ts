@@ -87,6 +87,18 @@ export interface CreateCalendarEventDto {
   recurrence_rule?: string;
 }
 
+export interface UpdateCalendarEventDto {
+  id: string;
+  title?: string;
+  description?: string | null;
+  location?: string | null;
+  starts_at?: string;
+  ends_at?: string | null;
+  timezone?: string;
+  all_day?: boolean;
+  recurrence_rule?: string | null;
+}
+
 // Natural Language Intent Interpretation
 export type IntentType =
   | 'create_task'

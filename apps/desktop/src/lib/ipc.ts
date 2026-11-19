@@ -13,6 +13,7 @@ import {
   UpdateTaskDto,
   CreateNoteDto,
   CreateCalendarEventDto,
+  UpdateCalendarEventDto,
   CommandIntent,
   CommandResult,
 } from '@maven/contracts';
@@ -38,6 +39,8 @@ export interface IIpcClient {
   // Calendar
   getCalendarEvents(): Promise<CalendarEvent[]>;
   createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent>;
+  updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent>;
+  deleteCalendarEvent(id: string): Promise<boolean>;
 
   // Command Interpreter
   interpretCommand(input: string): Promise<CommandIntent>;
@@ -983,10 +986,15 @@ class MockIpcProvider implements IIpcClient {
   }
 
   async createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent> {
+    const title = dto.title.trim();
+    if (!title) throw new Error('Event title cannot be empty');
+    if (dto.ends_at && dto.ends_at <= dto.starts_at) {
+      throw new Error('BR-002: ends_at must be strictly greater than starts_at');
+    }
     const now = new Date().toISOString();
     const newEvent: CalendarEvent = {
       id: `event-${Date.now()}`,
-      title: dto.title.trim(),
+      title,
       description: dto.description || null,
       location: dto.location || null,
       starts_at: dto.starts_at,
@@ -1000,6 +1008,49 @@ class MockIpcProvider implements IIpcClient {
     this.events.push(newEvent);
     this.saveToStorage();
     return newEvent;
+  }
+
+  async updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent> {
+    const idx = this.events.findIndex((e) => e.id === dto.id);
+    if (idx === -1) throw new Error('Calendar event not found');
+    const existing = this.events[idx]!;
+    const now = new Date().toISOString();
+
+    const title = dto.title !== undefined ? dto.title.trim() : existing.title;
+    if (!title) throw new Error('Event title cannot be empty');
+
+    const starts_at = dto.starts_at !== undefined ? dto.starts_at : existing.starts_at;
+    const ends_at = dto.ends_at !== undefined ? dto.ends_at : existing.ends_at;
+
+    // BR-002: ends_at > starts_at
+    if (ends_at && ends_at <= starts_at) {
+      throw new Error('BR-002: ends_at must be strictly greater than starts_at');
+    }
+
+    const updated: CalendarEvent = {
+      ...existing,
+      title,
+      description: dto.description !== undefined ? dto.description : existing.description,
+      location: dto.location !== undefined ? dto.location : existing.location,
+      starts_at,
+      ends_at,
+      timezone: dto.timezone !== undefined ? dto.timezone : existing.timezone,
+      all_day: dto.all_day !== undefined ? dto.all_day : existing.all_day,
+      recurrence_rule:
+        dto.recurrence_rule !== undefined ? dto.recurrence_rule : existing.recurrence_rule,
+      updated_at: now,
+    };
+    this.events[idx] = updated;
+    this.saveToStorage();
+    return updated;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<boolean> {
+    const idx = this.events.findIndex((e) => e.id === id);
+    if (idx === -1) return false;
+    this.events.splice(idx, 1);
+    this.saveToStorage();
+    return true;
   }
 
   async interpretCommand(input: string): Promise<CommandIntent> {
@@ -1119,6 +1170,14 @@ class TauriIpcClient implements IIpcClient {
 
   createCalendarEvent(dto: CreateCalendarEventDto): Promise<CalendarEvent> {
     return invoke<CalendarEvent>('create_calendar_event', { payload: dto });
+  }
+
+  updateCalendarEvent(dto: UpdateCalendarEventDto): Promise<CalendarEvent> {
+    return invoke<CalendarEvent>('update_calendar_event', { payload: dto });
+  }
+
+  deleteCalendarEvent(id: string): Promise<boolean> {
+    return invoke<boolean>('delete_calendar_event', { id });
   }
 
   interpretCommand(input: string): Promise<CommandIntent> {
